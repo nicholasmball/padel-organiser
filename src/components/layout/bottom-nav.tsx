@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import { Home, Calendar, PlusCircle, Users, User } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -15,6 +16,9 @@ const navItems = [
 
 export function BottomNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  if (!user) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card md:hidden">

@@ -1,6 +1,12 @@
 import { createServerClient } from "@supabase/ssr";
 import { NextResponse, type NextRequest } from "next/server";
 
+const publicPaths = ["/auth/sign-in", "/auth/sign-up", "/auth/callback", "/api/"];
+
+function isPublicPath(pathname: string) {
+  return publicPaths.some((p) => pathname.startsWith(p));
+}
+
 export async function updateSession(request: NextRequest) {
   let supabaseResponse = NextResponse.next({
     request,
@@ -30,7 +36,23 @@ export async function updateSession(request: NextRequest) {
   );
 
   // Refresh the session - important for Server Components
-  await supabase.auth.getUser();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  // Redirect unauthenticated users to sign-in (except public paths)
+  if (!user && !isPublicPath(request.nextUrl.pathname)) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/auth/sign-in";
+    return NextResponse.redirect(url);
+  }
+
+  // Redirect authenticated users away from auth pages
+  if (user && request.nextUrl.pathname.startsWith("/auth/sign")) {
+    const url = request.nextUrl.clone();
+    url.pathname = "/";
+    return NextResponse.redirect(url);
+  }
 
   return supabaseResponse;
 }

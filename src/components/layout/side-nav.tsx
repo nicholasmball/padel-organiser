@@ -2,6 +2,7 @@
 
 import Link from "next/link";
 import { usePathname } from "next/navigation";
+import { useAuth } from "@/hooks/use-auth";
 import {
   Home,
   Calendar,
@@ -13,9 +14,12 @@ import {
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
-const navItems = [
+const publicItems = [
   { href: "/", label: "Home", icon: Home },
   { href: "/calendar", label: "Calendar", icon: Calendar },
+];
+
+const authItems = [
   { href: "/bookings/new", label: "New Booking", icon: PlusCircle },
   { href: "/my-games", label: "My Games", icon: History },
   { href: "/members", label: "Members", icon: Users },
@@ -25,6 +29,11 @@ const navItems = [
 
 export function SideNav() {
   const pathname = usePathname();
+  const { user } = useAuth();
+
+  const navItems = [...publicItems, ...authItems];
+
+  if (!user) return null;
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:bg-sidebar">
