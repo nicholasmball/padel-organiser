@@ -24,6 +24,7 @@ import {
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { LogOut, Save } from "lucide-react";
+import { AvailabilityManager } from "@/components/availability/availability-manager";
 import type { Database } from "@/lib/types/database";
 
 type Profile = Database["public"]["Tables"]["profiles"]["Row"];
@@ -39,6 +40,12 @@ export default function ProfilePage() {
   const [fullName, setFullName] = useState("");
   const [phone, setPhone] = useState("");
   const [skillLevel, setSkillLevel] = useState<string>("");
+  const [availability, setAvailability] = useState<
+    Array<{ id: string; day_of_week: number; start_time: string; end_time: string }>
+  >([]);
+  const [unavailableDates, setUnavailableDates] = useState<
+    Array<{ id: string; date: string; reason: string | null }>
+  >([]);
 
   useEffect(() => {
     if (authLoading) return;
@@ -62,6 +69,37 @@ export default function ProfilePage() {
         setPhone(p.phone || "");
         setSkillLevel(p.skill_level || "");
       }
+
+      const { data: avail } = await supabase
+        .from("availability")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("day_of_week")
+        .order("start_time");
+
+      setAvailability(
+        ((avail as Array<Record<string, unknown>>) || []).map((a) => ({
+          id: a.id as string,
+          day_of_week: a.day_of_week as number,
+          start_time: a.start_time as string,
+          end_time: a.end_time as string,
+        }))
+      );
+
+      const { data: unavail } = await supabase
+        .from("unavailable_dates")
+        .select("*")
+        .eq("user_id", user!.id)
+        .order("date");
+
+      setUnavailableDates(
+        ((unavail as Array<Record<string, unknown>>) || []).map((u) => ({
+          id: u.id as string,
+          date: u.date as string,
+          reason: u.reason as string | null,
+        }))
+      );
+
       setLoading(false);
     }
 
@@ -181,6 +219,11 @@ export default function ProfilePage() {
           </CardFooter>
         </form>
       </Card>
+
+      <AvailabilityManager
+        availability={availability}
+        unavailableDates={unavailableDates}
+      />
     </div>
   );
 }

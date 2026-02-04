@@ -1,21 +1,42 @@
-import { Card, CardContent } from "@/components/ui/card";
-import { Users } from "lucide-react";
+import { createClient } from "@/lib/supabase/server";
+import { MembersList } from "@/components/members/members-list";
 
-export default function MembersPage() {
+export const dynamic = "force-dynamic";
+
+export default async function MembersPage() {
+  const supabase = await createClient();
+
+  const { data: profiles } = await supabase
+    .from("profiles")
+    .select("*")
+    .order("full_name");
+
+  const { data: availability } = await supabase
+    .from("availability")
+    .select("user_id, day_of_week, start_time, end_time")
+    .order("day_of_week")
+    .order("start_time");
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <h2 className="text-2xl font-bold tracking-tight">Members</h2>
-      <Card>
-        <CardContent className="flex flex-col items-center justify-center py-12 text-center">
-          <Users className="mb-3 h-10 w-10 text-muted-foreground/50" />
-          <p className="text-sm text-muted-foreground">
-            Member list coming soon.
-          </p>
-          <p className="text-sm text-muted-foreground">
-            View all community members, skill levels, and availability.
-          </p>
-        </CardContent>
-      </Card>
-    </div>
+    <MembersList
+      profiles={
+        ((profiles as Array<Record<string, unknown>>) || []).map((p) => ({
+          id: p.id as string,
+          full_name: p.full_name as string,
+          email: p.email as string,
+          phone: p.phone as string | null,
+          skill_level: p.skill_level as string | null,
+          created_at: p.created_at as string,
+        }))
+      }
+      availability={
+        ((availability as Array<Record<string, unknown>>) || []).map((a) => ({
+          user_id: a.user_id as string,
+          day_of_week: a.day_of_week as number,
+          start_time: a.start_time as string,
+          end_time: a.end_time as string,
+        }))
+      }
+    />
   );
 }
