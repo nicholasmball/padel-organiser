@@ -47,6 +47,40 @@ export default function ProfilePage() {
     Array<{ id: string; date: string; reason: string | null }>
   >([]);
 
+  async function loadAvailability(userId: string) {
+    const supabase = createClient();
+
+    const { data: avail } = await supabase
+      .from("availability")
+      .select("*")
+      .eq("user_id", userId)
+      .order("day_of_week")
+      .order("start_time");
+
+    setAvailability(
+      ((avail as Array<Record<string, unknown>>) || []).map((a) => ({
+        id: a.id as string,
+        day_of_week: a.day_of_week as number,
+        start_time: a.start_time as string,
+        end_time: a.end_time as string,
+      }))
+    );
+
+    const { data: unavail } = await supabase
+      .from("unavailable_dates")
+      .select("*")
+      .eq("user_id", userId)
+      .order("date");
+
+    setUnavailableDates(
+      ((unavail as Array<Record<string, unknown>>) || []).map((u) => ({
+        id: u.id as string,
+        date: u.date as string,
+        reason: u.reason as string | null,
+      }))
+    );
+  }
+
   useEffect(() => {
     if (authLoading) return;
     if (!user) {
@@ -70,36 +104,7 @@ export default function ProfilePage() {
         setSkillLevel(p.skill_level || "");
       }
 
-      const { data: avail } = await supabase
-        .from("availability")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("day_of_week")
-        .order("start_time");
-
-      setAvailability(
-        ((avail as Array<Record<string, unknown>>) || []).map((a) => ({
-          id: a.id as string,
-          day_of_week: a.day_of_week as number,
-          start_time: a.start_time as string,
-          end_time: a.end_time as string,
-        }))
-      );
-
-      const { data: unavail } = await supabase
-        .from("unavailable_dates")
-        .select("*")
-        .eq("user_id", user!.id)
-        .order("date");
-
-      setUnavailableDates(
-        ((unavail as Array<Record<string, unknown>>) || []).map((u) => ({
-          id: u.id as string,
-          date: u.date as string,
-          reason: u.reason as string | null,
-        }))
-      );
-
+      await loadAvailability(user!.id);
       setLoading(false);
     }
 
@@ -223,6 +228,7 @@ export default function ProfilePage() {
       <AvailabilityManager
         availability={availability}
         unavailableDates={unavailableDates}
+        onUpdate={() => user && loadAvailability(user.id)}
       />
     </div>
   );

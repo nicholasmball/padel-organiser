@@ -1,6 +1,7 @@
 "use client";
 
 import { useState } from "react";
+import { useRouter } from "next/navigation";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -54,12 +55,15 @@ interface UnavailableDateEntry {
 interface AvailabilityManagerProps {
   availability: AvailabilitySlot[];
   unavailableDates: UnavailableDateEntry[];
+  onUpdate?: () => void;
 }
 
 export function AvailabilityManager({
   availability,
   unavailableDates,
+  onUpdate,
 }: AvailabilityManagerProps) {
+  const router = useRouter();
   const [showAddSlot, setShowAddSlot] = useState(false);
   const [showAddDate, setShowAddDate] = useState(false);
   const [loading, setLoading] = useState(false);
@@ -84,12 +88,14 @@ export function AvailabilityManager({
     await addAvailability(parseInt(day), startTime, endTime);
     setShowAddSlot(false);
     setLoading(false);
+    onUpdate?.();
   }
 
   async function handleRemoveSlot(id: string) {
     setLoading(true);
     await removeAvailability(id);
     setLoading(false);
+    onUpdate?.();
   }
 
   async function handleAddDate() {
@@ -99,12 +105,14 @@ export function AvailabilityManager({
     setUnavailDate("");
     setUnavailReason("");
     setLoading(false);
+    onUpdate?.();
   }
 
   async function handleRemoveDate(id: string) {
     setLoading(true);
     await removeUnavailableDate(id);
     setLoading(false);
+    onUpdate?.();
   }
 
   return (
