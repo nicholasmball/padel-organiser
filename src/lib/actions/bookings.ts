@@ -4,6 +4,7 @@ import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { ensureProfile } from "@/lib/ensure-profile";
+import { geocodeAddress } from "@/lib/geocode";
 import type { Database } from "@/lib/types/database";
 
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
@@ -32,12 +33,25 @@ export async function createBooking(formData: {
   const profileResult = await ensureProfile(supabase);
   if (profileResult.error) return { error: profileResult.error };
 
+  // Geocode address to get coordinates for weather
+  let venue_lat: number | null = null;
+  let venue_lng: number | null = null;
+  if (formData.venue_address) {
+    const coords = await geocodeAddress(formData.venue_address);
+    if (coords) {
+      venue_lat = coords.lat;
+      venue_lng = coords.lng;
+    }
+  }
+
   const { data, error } = await supabase
     .from("bookings")
     .insert({
       ...formData,
       organiser_id: user.id,
       venue_address: formData.venue_address || null,
+      venue_lat,
+      venue_lng,
       court_number: formData.court_number || null,
       notes: formData.notes || null,
       signup_deadline: formData.signup_deadline || null,
@@ -81,11 +95,24 @@ export async function updateBooking(
 
   if (!user) return { error: "Not authenticated" };
 
+  // Geocode address to get coordinates for weather
+  let venue_lat: number | null = null;
+  let venue_lng: number | null = null;
+  if (formData.venue_address) {
+    const coords = await geocodeAddress(formData.venue_address);
+    if (coords) {
+      venue_lat = coords.lat;
+      venue_lng = coords.lng;
+    }
+  }
+
   const { error } = await supabase
     .from("bookings")
     .update({
       ...formData,
       venue_address: formData.venue_address || null,
+      venue_lat,
+      venue_lng,
       court_number: formData.court_number || null,
       notes: formData.notes || null,
       signup_deadline: formData.signup_deadline || null,

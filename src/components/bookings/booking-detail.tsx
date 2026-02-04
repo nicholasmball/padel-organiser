@@ -43,6 +43,7 @@ import {
   HelpCircle,
   DollarSign,
 } from "lucide-react";
+import { WeatherBadge } from "@/components/weather/weather-badge";
 
 interface Signup {
   id: string;
@@ -62,6 +63,8 @@ interface BookingDetailProps {
     organiser_id: string;
     venue_name: string;
     venue_address: string | null;
+    venue_lat: number | null;
+    venue_lng: number | null;
     court_number: string | null;
     is_outdoor: boolean;
     date: string;
@@ -225,6 +228,18 @@ export function BookingDetail({
             <>
               <Separator />
               <p className="text-sm">{booking.notes}</p>
+            </>
+          )}
+
+          {booking.is_outdoor && booking.venue_lat && booking.venue_lng && (
+            <>
+              <Separator />
+              <WeatherBadge
+                lat={booking.venue_lat}
+                lng={booking.venue_lng}
+                date={booking.date}
+                isOutdoor={booking.is_outdoor}
+              />
             </>
           )}
 

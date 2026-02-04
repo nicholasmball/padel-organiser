@@ -74,6 +74,8 @@ export default async function CalendarPage() {
     max_players: b.max_players as number,
     status: b.status as string,
     is_outdoor: b.is_outdoor as boolean,
+    venue_lat: b.venue_lat as number | null,
+    venue_lng: b.venue_lng as number | null,
     confirmed_count: confirmedCounts.get(b.id as string) || 0,
     organiser_name: organiserMap.get(b.organiser_id as string) || "Unknown",
   }));

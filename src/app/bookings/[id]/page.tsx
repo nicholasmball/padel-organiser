@@ -1,6 +1,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { BookingDetail } from "@/components/bookings/booking-detail";
+import { CommentsSection } from "@/components/bookings/comments-section";
 
 interface PageProps {
   params: Promise<{ id: string }>;
@@ -62,6 +63,46 @@ export default async function BookingPage({ params }: PageProps) {
     } | undefined,
   }));
 
+  // Get comments with profiles
+  const { data: comments } = await supabase
+    .from("comments")
+    .select("*")
+    .eq("booking_id", id)
+    .order("is_pinned", { ascending: false })
+    .order("created_at", { ascending: true });
+
+  const commentUserIds = [
+    ...new Set(
+      ((comments as Array<Record<string, unknown>>) || []).map(
+        (c) => c.user_id as string
+      )
+    ),
+  ];
+  const { data: commentProfiles } = commentUserIds.length
+    ? await supabase
+        .from("profiles")
+        .select("id, full_name")
+        .in("id", commentUserIds)
+    : { data: [] };
+
+  const commentProfileMap = new Map(
+    ((commentProfiles as Array<Record<string, unknown>>) || []).map((p) => [
+      p.id as string,
+      { full_name: p.full_name as string },
+    ])
+  );
+
+  const enrichedComments = (
+    (comments as Array<Record<string, unknown>>) || []
+  ).map((c) => ({
+    id: c.id as string,
+    user_id: c.user_id as string,
+    content: c.content as string,
+    is_pinned: c.is_pinned as boolean,
+    created_at: c.created_at as string,
+    profile: commentProfileMap.get(c.user_id as string),
+  }));
+
   const b = booking as Record<string, unknown>;
 
   return (
@@ -72,6 +113,8 @@ export default async function BookingPage({ params }: PageProps) {
           organiser_id: b.organiser_id as string,
           venue_name: b.venue_name as string,
           venue_address: b.venue_address as string | null,
+          venue_lat: b.venue_lat as number | null,
+          venue_lng: b.venue_lng as number | null,
           court_number: b.court_number as string | null,
           is_outdoor: b.is_outdoor as boolean,
           date: b.date as string,
@@ -88,6 +131,13 @@ export default async function BookingPage({ params }: PageProps) {
         }
         signups={enrichedSignups}
       />
+      <div className="mt-4">
+        <CommentsSection
+          bookingId={b.id as string}
+          organiserId={b.organiser_id as string}
+          comments={enrichedComments}
+        />
+      </div>
     </div>
   );
 }

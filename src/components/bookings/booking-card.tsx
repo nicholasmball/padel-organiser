@@ -2,6 +2,7 @@ import Link from "next/link";
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { WeatherBadge } from "@/components/weather/weather-badge";
 
 interface BookingCardProps {
   id: string;
@@ -14,6 +15,8 @@ interface BookingCardProps {
   max_players: number;
   status: string;
   is_outdoor: boolean;
+  venue_lat: number | null;
+  venue_lng: number | null;
   confirmed_count: number;
   organiser_name: string;
 }
@@ -58,6 +61,8 @@ export function BookingCard({
   max_players,
   status,
   is_outdoor,
+  venue_lat,
+  venue_lng,
   confirmed_count,
   organiser_name,
 }: BookingCardProps) {
@@ -114,9 +119,20 @@ export function BookingCard({
               </span>
             )}
           </div>
-          <p className="text-xs text-muted-foreground">
-            Organised by {organiser_name}
-          </p>
+          <div className="flex items-center justify-between">
+            <p className="text-xs text-muted-foreground">
+              Organised by {organiser_name}
+            </p>
+            {is_outdoor && venue_lat && venue_lng && (
+              <WeatherBadge
+                lat={venue_lat}
+                lng={venue_lng}
+                date={date}
+                isOutdoor={is_outdoor}
+                compact
+              />
+            )}
+          </div>
         </CardContent>
       </Card>
     </Link>

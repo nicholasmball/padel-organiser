@@ -18,6 +18,8 @@ interface Booking {
   max_players: number;
   status: string;
   is_outdoor: boolean;
+  venue_lat: number | null;
+  venue_lng: number | null;
   confirmed_count: number;
   organiser_name: string;
 }
