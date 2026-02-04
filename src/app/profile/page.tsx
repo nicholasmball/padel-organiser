@@ -23,7 +23,19 @@ import {
   CardTitle,
 } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { LogOut, Save } from "lucide-react";
+import { LogOut, Save, Trash2 } from "lucide-react";
+import {
+  AlertDialog,
+  AlertDialogAction,
+  AlertDialogCancel,
+  AlertDialogContent,
+  AlertDialogDescription,
+  AlertDialogFooter,
+  AlertDialogHeader,
+  AlertDialogTitle,
+  AlertDialogTrigger,
+} from "@/components/ui/alert-dialog";
+import { deleteAccount } from "@/lib/actions/account";
 import { AvailabilityManager } from "@/components/availability/availability-manager";
 import type { Database } from "@/lib/types/database";
 
@@ -230,6 +242,55 @@ export default function ProfilePage() {
         unavailableDates={unavailableDates}
         onUpdate={() => user && loadAvailability(user.id)}
       />
+
+      <Card className="border-destructive/30">
+        <CardHeader>
+          <CardTitle className="text-destructive">Delete Account</CardTitle>
+          <CardDescription>
+            Permanently delete your account and all associated data. This
+            includes your profile, availability, signups, comments, and any
+            bookings you organised. This cannot be undone.
+          </CardDescription>
+        </CardHeader>
+        <CardContent>
+          <AlertDialog>
+            <AlertDialogTrigger asChild>
+              <Button variant="destructive" className="gap-2">
+                <Trash2 className="h-4 w-4" />
+                Delete My Account
+              </Button>
+            </AlertDialogTrigger>
+            <AlertDialogContent>
+              <AlertDialogHeader>
+                <AlertDialogTitle>Are you absolutely sure?</AlertDialogTitle>
+                <AlertDialogDescription>
+                  This will permanently delete your account and remove all your
+                  data from our servers. Any bookings you organised will also be
+                  deleted. This action cannot be undone.
+                </AlertDialogDescription>
+              </AlertDialogHeader>
+              <AlertDialogFooter>
+                <AlertDialogCancel>Cancel</AlertDialogCancel>
+                <AlertDialogAction
+                  className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                  onClick={async () => {
+                    const result = await deleteAccount();
+                    if (result.error) {
+                      setMessage(`Delete failed: ${result.error}`);
+                      return;
+                    }
+                    const supabase = createClient();
+                    await supabase.auth.signOut();
+                    router.push("/auth/sign-in");
+                  }}
+                >
+                  Delete My Account
+                </AlertDialogAction>
+              </AlertDialogFooter>
+            </AlertDialogContent>
+          </AlertDialog>
+        </CardContent>
+      </Card>
     </div>
   );
 }
