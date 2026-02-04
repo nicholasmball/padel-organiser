@@ -10,6 +10,7 @@ import {
   deleteBooking,
   markInterested,
 } from "@/lib/actions/bookings";
+import { togglePaymentStatus } from "@/lib/actions/payments";
 import { Button } from "@/components/ui/button";
 import { Badge } from "@/components/ui/badge";
 import { Separator } from "@/components/ui/separator";
@@ -380,14 +381,31 @@ export function BookingDetail({
                 </div>
               </div>
               {booking.total_cost > 0 && (
-                <Badge
-                  variant={
-                    signup.payment_status === "paid" ? "default" : "outline"
-                  }
-                  className="text-xs"
+                <button
+                  onClick={async () => {
+                    if (!user) return;
+                    if (user.id !== signup.user_id && !isOrganiser) return;
+                    await togglePaymentStatus(signup.id, booking.id);
+                    router.refresh();
+                  }}
+                  disabled={!user || (user.id !== signup.user_id && !isOrganiser)}
+                  className="cursor-pointer disabled:cursor-default"
                 >
-                  {signup.payment_status === "paid" ? "Paid" : "Unpaid"}
-                </Badge>
+                  <Badge
+                    variant={
+                      signup.payment_status === "paid" ? "default" : "outline"
+                    }
+                    className={`text-xs ${
+                      user && (user.id === signup.user_id || isOrganiser)
+                        ? "hover:opacity-70"
+                        : ""
+                    }`}
+                  >
+                    {signup.payment_status === "paid"
+                      ? "Paid"
+                      : `Unpaid · $${costPerPlayer.toFixed(2)}`}
+                  </Badge>
+                </button>
               )}
             </div>
           ))}
@@ -443,6 +461,45 @@ export function BookingDetail({
           )}
         </CardContent>
       </Card>
+
+      {/* Payment summary */}
+      {booking.total_cost > 0 && confirmedSignups.length > 0 && (
+        <Card>
+          <CardHeader className="pb-3">
+            <CardTitle className="text-base">Payment Summary</CardTitle>
+          </CardHeader>
+          <CardContent className="space-y-3">
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Total cost</span>
+              <span className="font-medium">${booking.total_cost.toFixed(2)}</span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Per player ({confirmedSignups.length} players)</span>
+              <span className="font-medium">${costPerPlayer.toFixed(2)}</span>
+            </div>
+            <Separator />
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Paid</span>
+              <span className="font-medium text-green-600">
+                {confirmedSignups.filter((s) => s.payment_status === "paid").length}/{confirmedSignups.length}
+              </span>
+            </div>
+            <div className="flex justify-between text-sm">
+              <span className="text-muted-foreground">Outstanding</span>
+              <span className="font-medium text-orange-600">
+                ${(
+                  confirmedSignups.filter((s) => s.payment_status === "unpaid").length * costPerPlayer
+                ).toFixed(2)}
+              </span>
+            </div>
+            {user && isOrganiser && (
+              <p className="text-xs text-muted-foreground">
+                Tap a player&apos;s payment badge to toggle paid/unpaid.
+              </p>
+            )}
+          </CardContent>
+        </Card>
+      )}
     </div>
   );
 }
