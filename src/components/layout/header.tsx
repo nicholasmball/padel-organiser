@@ -6,6 +6,7 @@ import { useAuth } from "@/hooks/use-auth";
 import { Button } from "@/components/ui/button";
 import { Avatar, AvatarFallback } from "@/components/ui/avatar";
 import { LogIn } from "lucide-react";
+import { NotificationBell } from "@/components/layout/notification-bell";
 
 const pageTitles: Record<string, string> = {
   "/": "Home",
@@ -15,6 +16,7 @@ const pageTitles: Record<string, string> = {
   "/members": "Members",
   "/balances": "Balances",
   "/profile": "Profile",
+  "/notifications": "Notifications",
   "/auth/sign-in": "Sign In",
   "/auth/sign-up": "Sign Up",
 };
@@ -44,13 +46,16 @@ export function Header() {
         {!loading && (
           <div className="flex items-center gap-2">
             {user ? (
-              <Link href="/profile">
-                <Avatar className="h-8 w-8 cursor-pointer">
-                  <AvatarFallback className="bg-primary text-primary-foreground text-xs">
-                    {initials}
-                  </AvatarFallback>
-                </Avatar>
-              </Link>
+              <>
+                <NotificationBell />
+                <Link href="/profile">
+                  <Avatar className="h-8 w-8 cursor-pointer">
+                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                      {initials}
+                    </AvatarFallback>
+                  </Avatar>
+                </Link>
+              </>
             ) : (
               <Link href="/auth/sign-in">
                 <Button variant="outline" size="sm" className="gap-2">

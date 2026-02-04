@@ -3,6 +3,7 @@
 import { createClient } from "@/lib/supabase/server";
 import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
+import { createNotification } from "@/lib/actions/notifications";
 
 export async function addComment(bookingId: string, content: string) {
   const supabase = await createClient();
@@ -20,6 +21,41 @@ export async function addComment(bookingId: string, content: string) {
   });
 
   if (error) return { error: error.message };
+
+  // Notify other signed-up players about the new comment
+  const { data: signups } = await supabase
+    .from("signups")
+    .select("user_id")
+    .eq("booking_id", bookingId)
+    .neq("user_id", user.id);
+
+  const { data: profile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("venue_name")
+    .eq("id", bookingId)
+    .single();
+
+  const name = (profile as unknown as { full_name: string })?.full_name || "Someone";
+  const venueName = (booking as unknown as { venue_name: string })?.venue_name || "a booking";
+  const userIds = ((signups as Array<Record<string, unknown>>) || []).map(
+    (s) => s.user_id as string
+  );
+
+  if (userIds.length > 0) {
+    createNotification({
+      userIds,
+      bookingId,
+      type: "comment",
+      title: `${name} commented`,
+      message: `New comment on ${venueName}: "${content.trim().slice(0, 80)}${content.trim().length > 80 ? "..." : ""}"`,
+    });
+  }
 
   revalidatePath(`/bookings/${bookingId}`);
   return { success: true };

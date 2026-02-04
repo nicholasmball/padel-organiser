@@ -269,6 +269,54 @@ export type Database = {
           },
         ];
       };
+      notifications: {
+        Row: {
+          id: string;
+          user_id: string;
+          booking_id: string | null;
+          type: string;
+          title: string;
+          message: string;
+          is_read: boolean;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          user_id: string;
+          booking_id?: string | null;
+          type: string;
+          title: string;
+          message: string;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          user_id?: string;
+          booking_id?: string | null;
+          type?: string;
+          title?: string;
+          message?: string;
+          is_read?: boolean;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "notifications_user_id_fkey";
+            columns: ["user_id"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+          {
+            foreignKeyName: "notifications_booking_id_fkey";
+            columns: ["booking_id"];
+            isOneToOne: false;
+            referencedRelation: "bookings";
+            referencedColumns: ["id"];
+          },
+        ];
+      };
       weather_cache: {
         Row: {
           id: string;

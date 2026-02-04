@@ -5,6 +5,7 @@ import { createAdminClient } from "@/lib/supabase/admin";
 import { revalidatePath } from "next/cache";
 import { ensureProfile } from "@/lib/ensure-profile";
 import { geocodeAddress } from "@/lib/geocode";
+import { createNotification } from "@/lib/actions/notifications";
 import type { Database } from "@/lib/types/database";
 
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
@@ -135,12 +136,40 @@ export async function deleteBooking(bookingId: string) {
 
   if (!user) return { error: "Not authenticated" };
 
+  // Get booking info and signups before cancelling
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("venue_name")
+    .eq("id", bookingId)
+    .single();
+
+  const { data: signups } = await supabase
+    .from("signups")
+    .select("user_id")
+    .eq("booking_id", bookingId)
+    .neq("user_id", user.id);
+
   const { error } = await supabase
     .from("bookings")
     .update({ status: "cancelled" } as BookingUpdate)
     .eq("id", bookingId);
 
   if (error) return { error: error.message };
+
+  // Notify all signed-up players
+  const venueName = (booking as unknown as { venue_name: string })?.venue_name || "a booking";
+  const userIds = ((signups as Array<Record<string, unknown>>) || []).map(
+    (s) => s.user_id as string
+  );
+  if (userIds.length > 0) {
+    createNotification({
+      userIds,
+      bookingId,
+      type: "cancelled",
+      title: "Booking cancelled",
+      message: `${venueName} has been cancelled by the organiser`,
+    });
+  }
 
   revalidatePath("/");
   revalidatePath(`/bookings/${bookingId}`);
@@ -160,13 +189,18 @@ export async function signUpForBooking(bookingId: string) {
   // Get booking details
   const { data: booking } = await supabase
     .from("bookings")
-    .select("max_players, status")
+    .select("max_players, status, organiser_id, venue_name")
     .eq("id", bookingId)
     .single();
 
   if (!booking) return { error: "Booking not found" };
 
-  const b = booking as unknown as { max_players: number; status: string };
+  const b = booking as unknown as {
+    max_players: number;
+    status: string;
+    organiser_id: string;
+    venue_name: string;
+  };
   if (b.status === "cancelled") return { error: "Booking is cancelled" };
 
   // Count confirmed signups
@@ -189,6 +223,23 @@ export async function signUpForBooking(bookingId: string) {
   if (error) {
     if (error.code === "23505") return { error: "Already signed up" };
     return { error: error.message };
+  }
+
+  // Notify organiser of new signup
+  if (b.organiser_id !== user.id) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+    const name = (profile as unknown as { full_name: string })?.full_name || "Someone";
+    createNotification({
+      userIds: [b.organiser_id],
+      bookingId,
+      type: "signup",
+      title: `${name} signed up`,
+      message: `${name} ${isWaitlist ? "joined the waitlist for" : "signed up for"} ${b.venue_name}`,
+    });
   }
 
   // Update booking status if now full
@@ -270,10 +321,27 @@ export async function leaveBooking(bookingId: string) {
       .single();
 
     if (nextInLine) {
+      const nxt = nextInLine as unknown as { id: string; user_id: string };
       await admin
         .from("signups")
         .update({ status: "confirmed", position: null })
-        .eq("id", (nextInLine as unknown as { id: string }).id);
+        .eq("id", nxt.id);
+
+      // Get booking name for notification
+      const { data: bkData } = await admin
+        .from("bookings")
+        .select("venue_name")
+        .eq("id", bookingId)
+        .single();
+      const vName = (bkData as unknown as { venue_name: string })?.venue_name || "a booking";
+
+      createNotification({
+        userIds: [nxt.user_id],
+        bookingId,
+        type: "waitlist_promoted",
+        title: "You're in!",
+        message: `A spot opened up — you've been confirmed for ${vName}`,
+      });
     }
 
     // Update booking status

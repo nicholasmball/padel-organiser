@@ -124,3 +124,21 @@
     @apply bg-background text-foreground;
   }
 }
+
+@keyframes bell-ring {
+  0% {
+    transform: rotate(0deg);
+  }
+  25% {
+    transform: rotate(12deg);
+  }
+  50% {
+    transform: rotate(0deg);
+  }
+  75% {
+    transform: rotate(-12deg);
+  }
+  100% {
+    transform: rotate(0deg);
+  }
+}
