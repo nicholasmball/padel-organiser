@@ -33,7 +33,7 @@ export function SideNav() {
 
   const navItems = [...publicItems, ...authItems];
 
-  if (!user) return null;
+  if (!user || pathname.startsWith("/auth/")) return null;
 
   return (
     <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:bg-sidebar">

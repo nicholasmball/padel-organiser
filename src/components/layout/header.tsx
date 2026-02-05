@@ -45,7 +45,7 @@ export function Header() {
         <h1 className="text-lg font-semibold">{title}</h1>
         {!loading && (
           <div className="flex items-center gap-2">
-            {user ? (
+            {user && !pathname.startsWith("/auth/") ? (
               <>
                 <NotificationBell />
                 <Link href="/profile">

@@ -18,7 +18,7 @@ export function BottomNav() {
   const pathname = usePathname();
   const { user } = useAuth();
 
-  if (!user) return null;
+  if (!user || pathname.startsWith("/auth/")) return null;
 
   return (
     <nav className="fixed bottom-0 left-0 right-0 z-50 border-t bg-card md:hidden">
