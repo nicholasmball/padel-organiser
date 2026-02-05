@@ -2,7 +2,6 @@
 
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
 import { Search, MessageCircle } from "lucide-react";
 
@@ -122,7 +121,7 @@ export function MembersList({ profiles, availability }: MembersListProps) {
         <div className="space-y-3">
           {filtered.map((profile) => {
             const userAvail = availByUser.get(profile.id) || [];
-            // Group by day
+            // Group by day and build comma-separated string
             const daySlots = new Map<number, AvailabilitySlot[]>();
             userAvail.forEach((a) => {
               const existing = daySlots.get(a.day_of_week) || [];
@@ -130,79 +129,71 @@ export function MembersList({ profiles, availability }: MembersListProps) {
               daySlots.set(a.day_of_week, existing);
             });
 
+            const timesText = [1, 2, 3, 4, 5, 6, 0]
+              .flatMap((dayNum) => {
+                const slots = daySlots.get(dayNum);
+                if (!slots) return [];
+                return slots.map(
+                  (slot) =>
+                    `${SHORT_DAYS[dayNum]} ${slot.start_time.slice(0, 5)}-${slot.end_time.slice(0, 5)}`
+                );
+              })
+              .join(", ");
+
             return (
-              <Card key={profile.id}>
-                <CardContent className="px-4 pt-4">
-                  <div className="flex items-start justify-between gap-2">
-                    <div className="flex min-w-0 items-center gap-2.5">
-                      {/* Avatar with ring */}
-                      <div className="shrink-0 rounded-full border-2 border-padel-teal p-[2px]">
-                        <div className="flex h-10 w-10 items-center justify-center rounded-full bg-padel-teal text-xs font-semibold text-white">
-                          {profile.full_name
-                            .split(" ")
-                            .map((n) => n[0])
-                            .join("")
-                            .toUpperCase()
-                            .slice(0, 2)}
-                        </div>
+              <Card key={profile.id} className="overflow-hidden py-0">
+                <CardContent className="px-4 py-4">
+                  <div className="flex items-center gap-3">
+                    {/* Avatar with ring */}
+                    <div className="shrink-0 rounded-full border-2 border-padel-teal p-[2px]">
+                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-padel-teal text-xs font-semibold text-white">
+                        {profile.full_name
+                          .split(" ")
+                          .map((n) => n[0])
+                          .join("")
+                          .toUpperCase()
+                          .slice(0, 2)}
                       </div>
-                      <div className="min-w-0">
-                        <div className="flex items-center gap-1.5">
-                          <p className="truncate text-[14px] font-semibold text-padel-charcoal">{profile.full_name}</p>
-                          {profile.is_admin && (
-                            <span className="inline-flex items-center gap-0.5 rounded-md bg-padel-lime px-1.5 py-0.5 text-[10px] font-semibold uppercase text-padel-charcoal">
-                              🛡️ Admin
-                            </span>
-                          )}
-                        </div>
-                        {profile.skill_level && (
-                          <span
-                            className={`mt-0.5 inline-block rounded-md px-2 py-0.5 text-xs font-medium capitalize ${skillColors[profile.skill_level] || ""}`}
-                          >
-                            {profile.skill_level}
+                    </div>
+                    {/* Info */}
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-1.5">
+                        <p className="truncate text-[14px] font-semibold text-padel-charcoal">{profile.full_name}</p>
+                        {profile.is_admin && (
+                          <span className="inline-flex shrink-0 items-center gap-0.5 rounded-md bg-padel-lime px-1.5 py-0.5 text-[10px] font-semibold uppercase text-padel-charcoal">
+                            🛡️ Admin
                           </span>
                         )}
                       </div>
+                      {profile.skill_level && (
+                        <span
+                          className={`mt-0.5 inline-block rounded-md px-2 py-0.5 text-xs font-medium capitalize ${skillColors[profile.skill_level] || ""}`}
+                        >
+                          {profile.skill_level}
+                        </span>
+                      )}
+                      {timesText && (
+                        <p className="mt-0.5 text-xs text-padel-gray-400">
+                          {timesText}
+                        </p>
+                      )}
                     </div>
+                    {/* Message button */}
                     {profile.phone && (
                       <a
                         href={getWhatsAppUrl(profile.phone)}
                         target="_blank"
                         rel="noopener noreferrer"
                         onClick={(e) => e.stopPropagation()}
+                        className="shrink-0"
                       >
-                        <button className="flex shrink-0 items-center gap-1 rounded-[10px] border-[1.5px] border-padel-teal px-2.5 py-1.5 text-[11px] font-medium text-padel-teal transition-colors hover:bg-padel-teal hover:text-white">
+                        <button className="flex items-center gap-1 rounded-[10px] border-[1.5px] border-padel-teal px-2.5 py-1.5 text-[11px] font-medium text-padel-teal transition-colors hover:bg-padel-teal hover:text-white">
                           <MessageCircle className="h-3 w-3" />
                           Message
                         </button>
                       </a>
                     )}
                   </div>
-
-                  {userAvail.length > 0 && (
-                    <div className="mt-3">
-                      <p className="mb-1.5 text-xs text-padel-gray-400">
-                        Preferred playing times
-                      </p>
-                      <div className="flex flex-wrap gap-1.5">
-                        {[1, 2, 3, 4, 5, 6, 0].map((dayNum) => {
-                          const slots = daySlots.get(dayNum);
-                          if (!slots) return null;
-                          return slots.map((slot, i) => (
-                            <Badge
-                              key={`${dayNum}-${i}`}
-                              variant="outline"
-                              className="text-xs border-padel-gray-200 text-padel-charcoal"
-                            >
-                              {SHORT_DAYS[dayNum]}{" "}
-                              {slot.start_time.slice(0, 5)}-
-                              {slot.end_time.slice(0, 5)}
-                            </Badge>
-                          ));
-                        })}
-                      </div>
-                    </div>
-                  )}
                 </CardContent>
               </Card>
             );

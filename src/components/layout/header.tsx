@@ -13,7 +13,7 @@ const pageTitles: Record<string, string> = {
   "/calendar": "Calendar",
   "/bookings/new": "New Booking",
   "/my-games": "My Padel Games History",
-  "/members": "Padel Member Directory",
+  "/members": "Members",
   "/balances": "Padel Wallet & Balances",
   "/profile": "Profile",
   "/notifications": "Notifications",
