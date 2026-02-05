@@ -121,12 +121,12 @@ export function AvailabilityManager({
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Weekly Availability</CardTitle>
+            <CardTitle className="text-base text-padel-charcoal">Weekly Availability</CardTitle>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setShowAddSlot(!showAddSlot)}
-              className="gap-1"
+              className="gap-1 border-padel-teal text-padel-teal hover:bg-padel-teal/5"
             >
               <Plus className="h-4 w-4" />
               Add
@@ -135,9 +135,9 @@ export function AvailabilityManager({
         </CardHeader>
         <CardContent className="space-y-3">
           {showAddSlot && (
-            <div className="space-y-3 rounded-lg border p-3">
+            <div className="space-y-3 rounded-lg border border-padel-gray-200 p-3">
               <div className="space-y-2">
-                <Label>Day</Label>
+                <Label className="text-sm font-medium text-padel-charcoal">Day</Label>
                 <Select value={day} onValueChange={setDay}>
                   <SelectTrigger>
                     <SelectValue />
@@ -153,7 +153,7 @@ export function AvailabilityManager({
               </div>
               <div className="grid grid-cols-2 gap-3">
                 <div className="space-y-2">
-                  <Label>From</Label>
+                  <Label className="text-sm font-medium text-padel-charcoal">From</Label>
                   <Input
                     type="time"
                     value={startTime}
@@ -161,7 +161,7 @@ export function AvailabilityManager({
                   />
                 </div>
                 <div className="space-y-2">
-                  <Label>To</Label>
+                  <Label className="text-sm font-medium text-padel-charcoal">To</Label>
                   <Input
                     type="time"
                     value={endTime}
@@ -174,7 +174,7 @@ export function AvailabilityManager({
                   size="sm"
                   onClick={handleAddSlot}
                   disabled={loading}
-                  className="flex-1"
+                  className="flex-1 bg-padel-teal text-white hover:bg-padel-teal-dark"
                 >
                   Save
                 </Button>
@@ -182,7 +182,7 @@ export function AvailabilityManager({
                   size="sm"
                   variant="outline"
                   onClick={() => setShowAddSlot(false)}
-                  className="flex-1"
+                  className="flex-1 border-padel-gray-200 text-padel-gray-400 hover:text-padel-charcoal"
                 >
                   Cancel
                 </Button>
@@ -191,7 +191,7 @@ export function AvailabilityManager({
           )}
 
           {availability.length === 0 && !showAddSlot ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-padel-gray-400">
               No availability set. Add your regular playing times.
             </p>
           ) : (
@@ -201,7 +201,7 @@ export function AvailabilityManager({
                 if (!slots) return null;
                 return (
                   <div key={dayNum} className="flex items-center gap-2">
-                    <span className="w-10 text-sm font-medium text-muted-foreground">
+                    <span className="w-10 text-sm font-medium text-padel-gray-400">
                       {SHORT_DAYS[dayNum]}
                     </span>
                     <div className="flex flex-wrap gap-1.5">
@@ -209,13 +209,13 @@ export function AvailabilityManager({
                         <Badge
                           key={slot.id}
                           variant="secondary"
-                          className="gap-1 pr-1"
+                          className="gap-1 pr-1 bg-padel-teal/10 text-padel-teal-dark"
                         >
                           {slot.start_time.slice(0, 5)} -{" "}
                           {slot.end_time.slice(0, 5)}
                           <button
                             onClick={() => handleRemoveSlot(slot.id)}
-                            className="ml-1 rounded-full p-0.5 hover:bg-muted"
+                            className="ml-1 rounded-full p-0.5 hover:bg-padel-teal/20"
                             disabled={loading}
                           >
                             <X className="h-3 w-3" />
@@ -235,12 +235,12 @@ export function AvailabilityManager({
       <Card>
         <CardHeader className="pb-3">
           <div className="flex items-center justify-between">
-            <CardTitle className="text-base">Unavailable Dates</CardTitle>
+            <CardTitle className="text-base text-padel-charcoal">Unavailable Dates</CardTitle>
             <Button
               size="sm"
               variant="outline"
               onClick={() => setShowAddDate(!showAddDate)}
-              className="gap-1"
+              className="gap-1 border-padel-teal text-padel-teal hover:bg-padel-teal/5"
             >
               <CalendarOff className="h-4 w-4" />
               Add
@@ -249,9 +249,9 @@ export function AvailabilityManager({
         </CardHeader>
         <CardContent className="space-y-3">
           {showAddDate && (
-            <div className="space-y-3 rounded-lg border p-3">
+            <div className="space-y-3 rounded-lg border border-padel-gray-200 p-3">
               <div className="space-y-2">
-                <Label>Date</Label>
+                <Label className="text-sm font-medium text-padel-charcoal">Date</Label>
                 <Input
                   type="date"
                   value={unavailDate}
@@ -259,7 +259,7 @@ export function AvailabilityManager({
                 />
               </div>
               <div className="space-y-2">
-                <Label>Reason (optional)</Label>
+                <Label className="text-sm font-medium text-padel-charcoal">Reason (optional)</Label>
                 <Input
                   placeholder="e.g. On holiday"
                   value={unavailReason}
@@ -271,7 +271,7 @@ export function AvailabilityManager({
                   size="sm"
                   onClick={handleAddDate}
                   disabled={loading || !unavailDate}
-                  className="flex-1"
+                  className="flex-1 bg-padel-teal text-white hover:bg-padel-teal-dark"
                 >
                   Save
                 </Button>
@@ -279,7 +279,7 @@ export function AvailabilityManager({
                   size="sm"
                   variant="outline"
                   onClick={() => setShowAddDate(false)}
-                  className="flex-1"
+                  className="flex-1 border-padel-gray-200 text-padel-gray-400 hover:text-padel-charcoal"
                 >
                   Cancel
                 </Button>
@@ -288,7 +288,7 @@ export function AvailabilityManager({
           )}
 
           {unavailableDates.length === 0 && !showAddDate ? (
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-padel-gray-400">
               No dates blocked. Add dates when you&apos;re not available.
             </p>
           ) : (
@@ -296,10 +296,10 @@ export function AvailabilityManager({
               {unavailableDates.map((entry) => (
                 <div
                   key={entry.id}
-                  className="flex items-center justify-between rounded-md border px-3 py-2"
+                  className="flex items-center justify-between rounded-lg border border-padel-gray-200 px-3 py-2"
                 >
                   <div>
-                    <span className="text-sm font-medium">
+                    <span className="text-sm font-medium text-padel-charcoal">
                       {new Date(entry.date + "T00:00:00").toLocaleDateString(
                         "en-GB",
                         {
@@ -311,14 +311,14 @@ export function AvailabilityManager({
                       )}
                     </span>
                     {entry.reason && (
-                      <span className="ml-2 text-sm text-muted-foreground">
+                      <span className="ml-2 text-sm text-padel-gray-400">
                         - {entry.reason}
                       </span>
                     )}
                   </div>
                   <button
                     onClick={() => handleRemoveDate(entry.id)}
-                    className="rounded-full p-1 hover:bg-muted"
+                    className="rounded-full p-1 hover:bg-padel-gray-200/50"
                     disabled={loading}
                   >
                     <X className="h-4 w-4" />

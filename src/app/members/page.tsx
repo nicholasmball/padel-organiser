@@ -27,6 +27,7 @@ export default async function MembersPage() {
           phone: p.phone as string | null,
           skill_level: p.skill_level as string | null,
           created_at: p.created_at as string,
+          is_admin: p.is_admin as boolean | undefined,
         }))
       }
       availability={

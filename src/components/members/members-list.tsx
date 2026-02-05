@@ -1,25 +1,27 @@
 "use client";
 
 import { useState } from "react";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
 import { Input } from "@/components/ui/input";
-import {
-  Select,
-  SelectContent,
-  SelectItem,
-  SelectTrigger,
-  SelectValue,
-} from "@/components/ui/select";
-import { Users, Search } from "lucide-react";
+import { Search, MessageCircle } from "lucide-react";
 
 const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
 const skillColors: Record<string, string> = {
-  beginner: "bg-green-100 text-green-800",
-  intermediate: "bg-blue-100 text-blue-800",
-  advanced: "bg-purple-100 text-purple-800",
-  pro: "bg-orange-100 text-orange-800",
+  beginner: "bg-[rgba(0,128,128,0.08)] text-padel-teal",
+  intermediate: "bg-[rgba(0,128,128,0.12)] text-padel-teal-dark",
+  advanced: "bg-[rgba(128,0,128,0.08)] text-purple-700",
+  pro: "bg-[rgba(204,255,0,0.2)] text-padel-teal-dark",
+};
+
+const SKILL_LEVELS = ["all", "beginner", "intermediate", "advanced", "pro"];
+const SKILL_LABELS: Record<string, string> = {
+  all: "All",
+  beginner: "Beginner",
+  intermediate: "Intermediate",
+  advanced: "Advanced",
+  pro: "Pro",
 };
 
 interface Profile {
@@ -29,6 +31,7 @@ interface Profile {
   phone: string | null;
   skill_level: string | null;
   created_at: string;
+  is_admin?: boolean;
 }
 
 interface AvailabilitySlot {
@@ -43,9 +46,13 @@ interface MembersListProps {
   availability: AvailabilitySlot[];
 }
 
+function getWhatsAppUrl(phone: string): string {
+  const digits = phone.replace(/\D/g, "");
+  return `https://wa.me/${digits}`;
+}
+
 export function MembersList({ profiles, availability }: MembersListProps) {
   const [search, setSearch] = useState("");
-  const [filterDay, setFilterDay] = useState<string>("all");
   const [filterSkill, setFilterSkill] = useState<string>("all");
 
   // Group availability by user
@@ -67,66 +74,46 @@ export function MembersList({ profiles, availability }: MembersListProps) {
     if (filterSkill !== "all" && p.skill_level !== filterSkill) {
       return false;
     }
-    if (filterDay !== "all") {
-      const userAvail = availByUser.get(p.id) || [];
-      const hasDay = userAvail.some(
-        (a) => a.day_of_week === parseInt(filterDay)
-      );
-      if (!hasDay) return false;
-    }
     return true;
   });
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
-      <div className="flex items-center gap-2 text-muted-foreground">
-        <Users className="h-5 w-5" />
-        <span className="text-sm">{profiles.length} members</span>
+    <div className="mx-auto max-w-[480px] space-y-4">
+      <p className="text-[13px] text-padel-gray-400">{profiles.length} members</p>
+
+      {/* Search */}
+      <div className="relative">
+        <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-padel-gray-400" />
+        <Input
+          placeholder="Search members..."
+          value={search}
+          onChange={(e) => setSearch(e.target.value)}
+          className="pl-9"
+        />
       </div>
 
-      {/* Filters */}
-      <div className="flex flex-col gap-2 sm:flex-row">
-        <div className="relative flex-1">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
-          <Input
-            placeholder="Search members..."
-            value={search}
-            onChange={(e) => setSearch(e.target.value)}
-            className="pl-9"
-          />
-        </div>
-        <Select value={filterDay} onValueChange={setFilterDay}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Day" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Any day</SelectItem>
-            {SHORT_DAYS.map((name, i) => (
-              <SelectItem key={i} value={i.toString()}>
-                {name}
-              </SelectItem>
-            ))}
-          </SelectContent>
-        </Select>
-        <Select value={filterSkill} onValueChange={setFilterSkill}>
-          <SelectTrigger className="w-full sm:w-40">
-            <SelectValue placeholder="Skill" />
-          </SelectTrigger>
-          <SelectContent>
-            <SelectItem value="all">Any level</SelectItem>
-            <SelectItem value="beginner">Beginner</SelectItem>
-            <SelectItem value="intermediate">Intermediate</SelectItem>
-            <SelectItem value="advanced">Advanced</SelectItem>
-            <SelectItem value="pro">Pro</SelectItem>
-          </SelectContent>
-        </Select>
+      {/* Filter chips */}
+      <div className="flex gap-2 overflow-x-auto pb-1 scrollbar-none">
+        {SKILL_LEVELS.map((level) => (
+          <button
+            key={level}
+            onClick={() => setFilterSkill(level)}
+            className={`shrink-0 rounded-full border-[1.5px] px-4 py-1.5 text-[13px] font-medium transition-all ${
+              filterSkill === level
+                ? "border-padel-teal bg-padel-teal text-white"
+                : "border-padel-gray-200 bg-white text-padel-gray-400 hover:border-padel-teal/50"
+            }`}
+          >
+            {SKILL_LABELS[level]}
+          </button>
+        ))}
       </div>
 
       {/* Members list */}
       {filtered.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <p className="text-sm text-muted-foreground">
+            <p className="text-sm text-padel-gray-400">
               No members match your filters.
             </p>
           </CardContent>
@@ -148,45 +135,72 @@ export function MembersList({ profiles, availability }: MembersListProps) {
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between">
                     <div className="flex items-center gap-3">
-                      <div className="flex h-10 w-10 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
-                        {profile.full_name
-                          .split(" ")
-                          .map((n) => n[0])
-                          .join("")
-                          .toUpperCase()
-                          .slice(0, 2)}
+                      {/* Avatar with ring */}
+                      <div className="rounded-full border-[2.5px] border-padel-teal p-[2px]">
+                        <div className="flex h-[52px] w-[52px] items-center justify-center rounded-full bg-padel-teal text-sm font-semibold text-white">
+                          {profile.full_name
+                            .split(" ")
+                            .map((n) => n[0])
+                            .join("")
+                            .toUpperCase()
+                            .slice(0, 2)}
+                        </div>
                       </div>
                       <div>
-                        <p className="font-medium">{profile.full_name}</p>
+                        <div className="flex items-center gap-2">
+                          <p className="text-[15px] font-semibold text-padel-charcoal">{profile.full_name}</p>
+                          {profile.is_admin && (
+                            <span className="inline-flex items-center gap-0.5 rounded-md bg-padel-lime px-1.5 py-0.5 text-[10px] font-semibold uppercase text-padel-charcoal">
+                              🛡️ Admin
+                            </span>
+                          )}
+                        </div>
                         {profile.skill_level && (
-                          <Badge
-                            variant="secondary"
-                            className={`mt-0.5 text-xs capitalize ${skillColors[profile.skill_level] || ""}`}
+                          <span
+                            className={`mt-0.5 inline-block rounded-md px-2 py-0.5 text-xs font-medium capitalize ${skillColors[profile.skill_level] || ""}`}
                           >
                             {profile.skill_level}
-                          </Badge>
+                          </span>
                         )}
                       </div>
                     </div>
+                    {profile.phone && (
+                      <a
+                        href={getWhatsAppUrl(profile.phone)}
+                        target="_blank"
+                        rel="noopener noreferrer"
+                        onClick={(e) => e.stopPropagation()}
+                      >
+                        <button className="flex items-center gap-1.5 rounded-[10px] border-[1.5px] border-padel-teal px-3 py-1.5 text-[12px] font-medium text-padel-teal transition-colors hover:bg-padel-teal hover:text-white">
+                          <MessageCircle className="h-3.5 w-3.5" />
+                          Message
+                        </button>
+                      </a>
+                    )}
                   </div>
 
                   {userAvail.length > 0 && (
-                    <div className="mt-3 flex flex-wrap gap-1.5">
-                      {[1, 2, 3, 4, 5, 6, 0].map((dayNum) => {
-                        const slots = daySlots.get(dayNum);
-                        if (!slots) return null;
-                        return slots.map((slot, i) => (
-                          <Badge
-                            key={`${dayNum}-${i}`}
-                            variant="outline"
-                            className="text-xs"
-                          >
-                            {SHORT_DAYS[dayNum]}{" "}
-                            {slot.start_time.slice(0, 5)}-
-                            {slot.end_time.slice(0, 5)}
-                          </Badge>
-                        ));
-                      })}
+                    <div className="mt-3">
+                      <p className="mb-1.5 text-xs text-padel-gray-400">
+                        Preferred playing times
+                      </p>
+                      <div className="flex flex-wrap gap-1.5">
+                        {[1, 2, 3, 4, 5, 6, 0].map((dayNum) => {
+                          const slots = daySlots.get(dayNum);
+                          if (!slots) return null;
+                          return slots.map((slot, i) => (
+                            <Badge
+                              key={`${dayNum}-${i}`}
+                              variant="outline"
+                              className="text-xs border-padel-gray-200 text-padel-charcoal"
+                            >
+                              {SHORT_DAYS[dayNum]}{" "}
+                              {slot.start_time.slice(0, 5)}-
+                              {slot.end_time.slice(0, 5)}
+                            </Badge>
+                          ));
+                        })}
+                      </div>
                     </div>
                   )}
                 </CardContent>

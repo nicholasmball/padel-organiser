@@ -1,7 +1,7 @@
 import Link from "next/link";
-import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card";
+import { Card, CardContent } from "@/components/ui/card";
 import { Badge } from "@/components/ui/badge";
-import { Calendar, Clock, MapPin, Users } from "lucide-react";
+import { Calendar, Clock, Users } from "lucide-react";
 import { WeatherBadge } from "@/components/weather/weather-badge";
 
 interface BookingCardProps {
@@ -21,12 +21,13 @@ interface BookingCardProps {
   organiser_name: string;
 }
 
-const statusVariant: Record<string, "default" | "secondary" | "destructive" | "outline"> = {
-  open: "default",
-  full: "secondary",
-  confirmed: "default",
-  completed: "outline",
-  cancelled: "destructive",
+// Design guide badge colors
+const statusColors: Record<string, string> = {
+  open: "bg-padel-lime text-padel-charcoal",
+  full: "bg-padel-teal text-white",
+  confirmed: "bg-padel-teal text-white",
+  completed: "bg-padel-gray-200 text-padel-gray-400",
+  cancelled: "bg-padel-red/15 text-padel-red",
 };
 
 const statusLabel: Record<string, string> = {
@@ -69,60 +70,42 @@ export function BookingCard({
   const costPerPlayer =
     confirmed_count > 0 ? total_cost / confirmed_count : total_cost / max_players;
 
+  // Left border accent per design guide
+  const borderAccent =
+    status === "open" || status === "confirmed"
+      ? "border-l-4 border-l-padel-lime"
+      : status === "full"
+        ? "border-l-4 border-l-padel-orange"
+        : status === "completed" || status === "cancelled"
+          ? "border-l-4 border-l-padel-gray-200"
+          : "";
+
   return (
     <Link href={`/bookings/${id}`}>
-      <Card className="transition-colors hover:bg-accent/30">
-        <CardHeader className="pb-3">
-          <div className="flex items-start justify-between">
-            <div className="min-w-0 flex-1">
-              <CardTitle className="truncate text-base">{venue_name}</CardTitle>
-              {venue_address && (
-                <p className="mt-1 flex items-center gap-1 truncate text-sm text-muted-foreground">
-                  <MapPin className="h-3.5 w-3.5 shrink-0" />
-                  {venue_address}
-                </p>
-              )}
-            </div>
-            <div className="ml-2 flex items-center gap-1.5">
-              {is_outdoor && (
-                <Badge variant="outline" className="text-xs">
-                  Outdoor
-                </Badge>
-              )}
-              <Badge variant={statusVariant[status] || "secondary"}>
-                {statusLabel[status] || status}
-              </Badge>
-            </div>
-          </div>
-        </CardHeader>
-        <CardContent className="space-y-2">
-          <div className="flex items-center gap-4 text-sm">
-            <span className="flex items-center gap-1.5">
-              <Calendar className="h-4 w-4 text-muted-foreground" />
-              {formatDate(date)}
-            </span>
-            <span className="flex items-center gap-1.5">
-              <Clock className="h-4 w-4 text-muted-foreground" />
-              {formatTime(start_time)} - {formatTime(end_time)}
-            </span>
-          </div>
-          <div className="flex items-center justify-between">
-            <div className="flex items-center gap-1.5 text-sm">
-              <Users className="h-4 w-4 text-muted-foreground" />
-              <span>
-                {confirmed_count}/{max_players} players
-              </span>
-            </div>
-            {total_cost > 0 && (
-              <span className="text-sm font-medium">
-                ${costPerPlayer.toFixed(2)}/player
-              </span>
+      <Card className={`transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,128,128,0.08)] ${borderAccent}`}>
+        <CardContent className="space-y-2.5 pt-4 pb-4">
+          {/* Venue name + address */}
+          <div>
+            <p className="truncate text-base font-bold text-padel-charcoal">{venue_name}</p>
+            {venue_address && (
+              <p className="truncate text-xs text-padel-gray-400">{venue_address}</p>
             )}
           </div>
-          <div className="flex items-center justify-between">
-            <p className="text-xs text-muted-foreground">
-              Organised by {organiser_name}
-            </p>
+
+          {/* Badges row */}
+          <div className="flex items-center gap-1.5">
+            <Badge
+              variant="secondary"
+              className={`text-[11px] font-semibold uppercase tracking-[0.05em] ${is_outdoor ? "bg-padel-teal/10 text-padel-teal-dark" : "bg-blue-100 text-blue-800"}`}
+            >
+              {is_outdoor ? "Outdoor" : "Indoor"}
+            </Badge>
+            <Badge
+              variant="secondary"
+              className={`text-[11px] font-semibold uppercase tracking-[0.05em] ${statusColors[status] || "bg-padel-gray-200 text-padel-gray-400"}`}
+            >
+              {statusLabel[status] || status}
+            </Badge>
             {is_outdoor && venue_lat && venue_lng && (
               <WeatherBadge
                 lat={venue_lat}
@@ -133,6 +116,32 @@ export function BookingCard({
               />
             )}
           </div>
+
+          {/* Info line */}
+          <div className="flex flex-wrap items-center gap-x-4 gap-y-1 text-sm text-padel-gray-400">
+            <span className="flex items-center gap-1">
+              <Calendar className="h-3.5 w-3.5" />
+              {formatDate(date)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Clock className="h-3.5 w-3.5" />
+              {formatTime(start_time)} - {formatTime(end_time)}
+            </span>
+            <span className="flex items-center gap-1">
+              <Users className="h-3.5 w-3.5" />
+              {confirmed_count}/{max_players}
+            </span>
+            {total_cost > 0 && (
+              <span className="font-medium text-padel-charcoal">
+                £{costPerPlayer.toFixed(2)}/player
+              </span>
+            )}
+          </div>
+
+          {/* Organiser */}
+          <p className="text-xs text-padel-gray-400">
+            Organised by {organiser_name}
+          </p>
         </CardContent>
       </Card>
     </Link>

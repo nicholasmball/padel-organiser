@@ -1,11 +1,40 @@
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
-import { Button } from "@/components/ui/button";
-import { Calendar, Users, PlusCircle } from "lucide-react";
+import { Calendar, Users } from "lucide-react";
 import Link from "next/link";
-import { BookingCard } from "@/components/bookings/booking-card";
+import { PadelHero } from "@/components/ui/padel-hero";
 
 export const dynamic = "force-dynamic";
+
+function formatDate(dateStr: string) {
+  const d = new Date(dateStr + "T00:00:00");
+  return d.toLocaleDateString("en-GB", {
+    weekday: "short",
+    day: "numeric",
+    month: "short",
+  });
+}
+
+function formatTime(timeStr: string) {
+  return timeStr.slice(0, 5);
+}
+
+function timeAgo(dateStr: string) {
+  const now = Date.now();
+  const then = new Date(dateStr).getTime();
+  const seconds = Math.floor((now - then) / 1000);
+  if (seconds < 60) return "just now";
+  const minutes = Math.floor(seconds / 60);
+  if (minutes < 60) return `${minutes}m ago`;
+  const hours = Math.floor(minutes / 60);
+  if (hours < 24) return `${hours}h ago`;
+  const days = Math.floor(hours / 24);
+  if (days < 7) return `${days}d ago`;
+  return new Date(dateStr).toLocaleDateString("en-GB", {
+    day: "numeric",
+    month: "short",
+  });
+}
 
 export default async function Home() {
   const supabase = await createClient();
@@ -14,6 +43,19 @@ export default async function Home() {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Get user's full name for personalised greeting
+  let fullName: string | null = null;
+  if (user) {
+    const { data: profile } = await supabase
+      .from("profiles")
+      .select("full_name")
+      .eq("id", user.id)
+      .single();
+    if (profile) {
+      fullName = (profile as Record<string, unknown>).full_name as string;
+    }
+  }
 
   // Get open/full bookings (upcoming, not cancelled/completed)
   const today = new Date().toISOString().split("T")[0];
@@ -42,6 +84,7 @@ export default async function Home() {
   // Count confirmed per booking
   const confirmedCounts = new Map<string, number>();
   const myBookingIds = new Set<string>();
+  const myBookingStatuses = new Map<string, string>();
   signupList.forEach((s) => {
     if (s.status === "confirmed") {
       const bid = s.booking_id as string;
@@ -49,6 +92,7 @@ export default async function Home() {
     }
     if (user && s.user_id === user.id && s.status !== "interested") {
       myBookingIds.add(s.booking_id as string);
+      myBookingStatuses.set(s.booking_id as string, s.status as string);
     }
   });
 
@@ -78,83 +122,146 @@ export default async function Home() {
       (b.status === "open" || b.status === "confirmed")
   );
 
+  // Fetch latest 3 notifications for the current user
+  let latestNotifications: Array<{
+    id: string;
+    title: string;
+    message: string;
+    is_read: boolean;
+    created_at: string;
+  }> = [];
+  if (user) {
+    const { data: notifs } = await supabase
+      .from("notifications")
+      .select("*")
+      .eq("user_id", user.id)
+      .order("created_at", { ascending: false })
+      .limit(3);
+    latestNotifications = ((notifs as Array<Record<string, unknown>>) || []).map((n) => ({
+      id: n.id as string,
+      title: n.title as string,
+      message: n.message as string,
+      is_read: n.is_read as boolean,
+      created_at: n.created_at as string,
+    }));
+  }
+
+  const firstName = fullName?.split(" ")[0];
+
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
-      <section className="space-y-2">
-        <h2 className="text-2xl font-bold tracking-tight">
-          {user ? "Welcome back" : "Padel Organiser"}
+    <div className="mx-auto max-w-[480px] space-y-6">
+      <section className="space-y-1">
+        <h2 className="text-2xl font-bold tracking-tight text-padel-charcoal" style={{ letterSpacing: "-0.01em" }}>
+          {user && firstName ? (
+            <>
+              Welcome back,{" "}
+              <span className="text-padel-teal">{firstName}</span>!
+            </>
+          ) : user ? (
+            "Welcome back!"
+          ) : (
+            "Padel Organiser"
+          )}
         </h2>
-        <p className="text-muted-foreground">
+        <p className="text-sm text-padel-gray-400">
           {user
             ? "Find open games, track your bookings, and connect with players."
             : "Sign in to join games and create bookings."}
         </p>
       </section>
 
-      {user && (
-        <Link href="/bookings/new">
-          <Button className="w-full gap-2" size="lg">
-            <PlusCircle className="h-5 w-5" />
-            Create New Booking
-          </Button>
-        </Link>
-      )}
+      {user && <PadelHero />}
 
-      {/* My upcoming games */}
+      {/* My upcoming games — compact flex-row cards */}
       {user && (
         <section className="space-y-3">
-          <h3 className="text-lg font-semibold">My Upcoming Games</h3>
+          <h3 className="text-lg font-semibold text-padel-charcoal">My Upcoming Games</h3>
           {myGames.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Calendar className="mb-3 h-10 w-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">
+                <Calendar className="mb-3 h-10 w-10 text-padel-gray-400/50" />
+                <p className="text-sm text-padel-gray-400">
                   No upcoming games yet.
                 </p>
-                <p className="text-sm text-muted-foreground">
+                <p className="text-sm text-padel-gray-400">
                   Sign up for an open game or create a booking.
                 </p>
               </CardContent>
             </Card>
           ) : (
             <div className="space-y-3">
-              {myGames.map((b) => (
-                <BookingCard
-                  key={b.id as string}
-                  id={b.id as string}
-                  venue_name={b.venue_name as string}
-                  venue_address={b.venue_address as string | null}
-                  date={b.date as string}
-                  start_time={b.start_time as string}
-                  end_time={b.end_time as string}
-                  total_cost={b.total_cost as number}
-                  max_players={b.max_players as number}
-                  status={b.status as string}
-                  is_outdoor={b.is_outdoor as boolean}
-                  venue_lat={b.venue_lat as number | null}
-                  venue_lng={b.venue_lng as number | null}
-                  confirmed_count={confirmedCounts.get(b.id as string) || 0}
-                  organiser_name={
-                    organiserMap.get(b.organiser_id as string) || "Unknown"
-                  }
-                />
-              ))}
+              {myGames.map((b) => {
+                const status = b.status as string;
+                const myStatus = myBookingStatuses.get(b.id as string);
+                const confirmed = confirmedCounts.get(b.id as string) || 0;
+                const max = b.max_players as number;
+                const costPerPlayer = confirmed > 0 ? (b.total_cost as number) / confirmed : (b.total_cost as number) / max;
+                const isWaitlisted = myStatus === "waitlist";
+                const borderColor = isWaitlisted || status === "full" ? "border-l-padel-orange" : "border-l-padel-lime";
+
+                return (
+                  <Link key={b.id as string} href={`/bookings/${b.id as string}`}>
+                    <div className={`flex items-center justify-between rounded-2xl border border-padel-gray-200 border-l-4 ${borderColor} bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(0,128,128,0.08)]`}>
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center gap-2">
+                          <p className="truncate text-[15px] font-semibold text-padel-charcoal">{b.venue_name as string}</p>
+                          <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+                            (b.is_outdoor as boolean) ? "bg-padel-teal/10 text-padel-teal-dark" : "bg-blue-100 text-blue-800"
+                          }`}>
+                            {(b.is_outdoor as boolean) ? "Outdoor" : "Indoor"}
+                          </span>
+                        </div>
+                        <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[13px] text-padel-gray-400">
+                          <span>{formatDate(b.date as string)}</span>
+                          <span>{formatTime(b.start_time as string)} - {formatTime(b.end_time as string)}</span>
+                          <span>{confirmed}/{max} players</span>
+                        </div>
+                      </div>
+                      <div className="ml-3 flex flex-col items-end gap-1.5">
+                        {(b.total_cost as number) > 0 && (
+                          <span className="text-sm font-bold text-padel-charcoal">
+                            £{costPerPlayer.toFixed(2)}
+                          </span>
+                        )}
+                        <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+                          status === "open"
+                            ? "bg-padel-lime text-padel-charcoal"
+                            : status === "full"
+                              ? "bg-padel-teal text-white"
+                              : isWaitlisted
+                                ? "bg-[rgba(255,152,0,0.15)] text-[#E65100]"
+                                : "bg-padel-teal text-white"
+                        }`}>
+                          {isWaitlisted ? "Waitlisted" : status === "open" ? "Open" : status === "full" ? "Full" : "Confirmed"}
+                        </span>
+                      </div>
+                    </div>
+                  </Link>
+                );
+              })}
             </div>
           )}
         </section>
       )}
 
-      {/* Open games */}
+      {/* Open games — redesigned scroll cards */}
       <section className="space-y-3">
-        <h3 className="text-lg font-semibold">Open Games</h3>
+        <div className="flex items-center justify-between">
+          <h3 className="text-lg font-semibold text-padel-charcoal">Open Games</h3>
+          {openGames.length > 3 && (
+            <Link href="/calendar" className="text-sm font-medium text-padel-teal">
+              See All
+            </Link>
+          )}
+        </div>
         {openGames.length === 0 && allBookings.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <Users className="mb-3 h-10 w-10 text-muted-foreground/50" />
-              <p className="text-sm text-muted-foreground">
+              <Users className="mb-3 h-10 w-10 text-padel-gray-400/50" />
+              <p className="text-sm text-padel-gray-400">
                 No open games right now.
               </p>
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-padel-gray-400">
                 Check back later or create one yourself.
               </p>
             </CardContent>
@@ -162,37 +269,99 @@ export default async function Home() {
         ) : openGames.length === 0 ? (
           <Card>
             <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-padel-gray-400">
                 No other open games at the moment.
               </p>
             </CardContent>
           </Card>
         ) : (
-          <div className="space-y-3">
-            {openGames.map((b) => (
-              <BookingCard
-                key={b.id as string}
-                id={b.id as string}
-                venue_name={b.venue_name as string}
-                venue_address={b.venue_address as string | null}
-                date={b.date as string}
-                start_time={b.start_time as string}
-                end_time={b.end_time as string}
-                total_cost={b.total_cost as number}
-                max_players={b.max_players as number}
-                status={b.status as string}
-                is_outdoor={b.is_outdoor as boolean}
-                venue_lat={b.venue_lat as number | null}
-                venue_lng={b.venue_lng as number | null}
-                confirmed_count={confirmedCounts.get(b.id as string) || 0}
-                organiser_name={
-                  organiserMap.get(b.organiser_id as string) || "Unknown"
-                }
-              />
-            ))}
+          <div className="flex gap-4 overflow-x-auto pb-2 -mx-1 px-1 scrollbar-none snap-x snap-mandatory">
+            {openGames.map((b) => {
+              const confirmed = confirmedCounts.get(b.id as string) || 0;
+              const max = b.max_players as number;
+              const spotsLeft = max - confirmed;
+
+              return (
+                <Link
+                  key={b.id as string}
+                  href={`/bookings/${b.id as string}`}
+                  className="w-[220px] flex-shrink-0 snap-start"
+                >
+                  <div className="flex h-full flex-col overflow-hidden rounded-2xl border border-padel-gray-200 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,128,128,0.08)]">
+                    <div className="flex-1 space-y-2.5 p-4">
+                      <p className="text-[15px] font-semibold leading-tight text-padel-charcoal">
+                        {b.venue_name as string}
+                      </p>
+                      <span className={`inline-block rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+                        (b.is_outdoor as boolean)
+                          ? "bg-padel-lime text-padel-charcoal"
+                          : "bg-blue-100 text-blue-800"
+                      }`}>
+                        {(b.is_outdoor as boolean) ? "Outdoor" : "Indoor"}
+                      </span>
+                      <div className="space-y-1 text-[13px] text-padel-gray-400">
+                        <div className="flex items-center gap-1.5">
+                          <span>📅</span>
+                          <span>{formatDate(b.date as string)}</span>
+                        </div>
+                        <div className="flex items-center gap-1.5">
+                          <span>🕐</span>
+                          <span>{formatTime(b.start_time as string)} - {formatTime(b.end_time as string)}</span>
+                        </div>
+                      </div>
+                      <p className="text-[13px] font-semibold text-padel-teal">
+                        {spotsLeft > 0
+                          ? `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`
+                          : "Full"}
+                      </p>
+                    </div>
+                    <div className="px-4 pb-4">
+                      <div className="w-full rounded-xl bg-padel-teal py-2.5 text-center text-[13px] font-semibold text-white">
+                        Join Game
+                      </div>
+                    </div>
+                  </div>
+                </Link>
+              );
+            })}
           </div>
         )}
       </section>
+
+      {/* Notifications section */}
+      {user && latestNotifications.length > 0 && (
+        <section className="space-y-3">
+          <div className="flex items-center justify-between">
+            <h3 className="text-lg font-semibold text-padel-charcoal">Notifications</h3>
+            <Link href="/notifications" className="text-sm font-medium text-padel-teal">
+              View All →
+            </Link>
+          </div>
+          <div className="rounded-2xl border border-padel-gray-200 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+            {latestNotifications.map((n, i) => (
+              <div
+                key={n.id}
+                className={`flex items-start gap-3 px-4 py-3 ${
+                  i < latestNotifications.length - 1 ? "border-b border-padel-gray-200" : ""
+                }`}
+              >
+                <div className={`mt-1.5 h-2.5 w-2.5 shrink-0 rounded-full ${
+                  n.is_read ? "bg-padel-gray-200" : "bg-padel-teal"
+                }`} />
+                <div className="min-w-0 flex-1">
+                  <p className="text-[13px] text-padel-charcoal">
+                    <span className="font-bold">{n.title}</span>{" "}
+                    <span className="text-padel-gray-400">{n.message}</span>
+                  </p>
+                  <p className="mt-0.5 text-[11px] text-padel-gray-400">
+                    {timeAgo(n.created_at)}
+                  </p>
+                </div>
+              </div>
+            ))}
+          </div>
+        </section>
+      )}
     </div>
   );
 }

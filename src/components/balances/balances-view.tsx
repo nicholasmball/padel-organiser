@@ -3,12 +3,8 @@
 import {
   Card,
   CardContent,
-  CardHeader,
-  CardTitle,
 } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
-import { Separator } from "@/components/ui/separator";
-import { ArrowRight, Wallet, TrendingUp, TrendingDown } from "lucide-react";
+import { Wallet } from "lucide-react";
 
 interface Debt {
   from_id: string;
@@ -55,102 +51,151 @@ export function BalancesView({
   const owedToMeDebts = debts.filter((d) => d.to_id === currentUserId);
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-[480px] space-y-4">
       {currentUserId && (
         <>
-          {/* My summary */}
+          {/* Balance hero — 2 boxes side by side */}
           <div className="grid grid-cols-2 gap-3">
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TrendingDown className="h-4 w-4" />
-                  I owe
-                </div>
-                <p className="mt-1 text-2xl font-bold text-orange-600">
-                  ${iOwe.toFixed(2)}
-                </p>
-              </CardContent>
-            </Card>
-            <Card>
-              <CardContent className="pt-4">
-                <div className="flex items-center gap-2 text-sm text-muted-foreground">
-                  <TrendingUp className="h-4 w-4" />
-                  Owed to me
-                </div>
-                <p className="mt-1 text-2xl font-bold text-green-600">
-                  ${owedToMe.toFixed(2)}
-                </p>
-              </CardContent>
-            </Card>
+            <div className="rounded-2xl p-4" style={{ background: "rgba(229,57,53,0.06)" }}>
+              <div className="mb-1 text-xl">📤</div>
+              <p className="text-sm font-medium text-padel-gray-400">I Owe</p>
+              <p className="mt-1 text-2xl font-bold text-[#E53935]">
+                -£{iOwe.toFixed(2)}
+              </p>
+            </div>
+            <div className="rounded-2xl p-4" style={{ background: "rgba(204,255,0,0.15)" }}>
+              <div className="mb-1 text-xl">📥</div>
+              <p className="text-sm font-medium text-padel-gray-400">Owed to Me</p>
+              <p className="mt-1 text-2xl font-bold text-padel-teal-dark">
+                +£{owedToMe.toFixed(2)}
+              </p>
+            </div>
           </div>
 
-          {/* My outstanding payments */}
-          {myDebts.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">I Need to Pay</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
-                {myDebts.map((d, i) => (
-                  <div
-                    key={`${d.booking_id}-${i}`}
-                    className="flex items-center justify-between"
-                  >
-                    <div>
-                      <p className="text-sm font-medium">{d.to_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {d.venue_name} ·{" "}
-                        {new Date(d.date + "T00:00:00").toLocaleDateString(
-                          "en-GB",
-                          { day: "numeric", month: "short" }
-                        )}
-                      </p>
+          {/* Per-member breakdown cards */}
+          {settlements.length > 0 && (
+            <div className="rounded-2xl border border-padel-gray-200 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <h3 className="mb-3 text-base font-semibold text-padel-charcoal">Settle Up</h3>
+              <p className="mb-3 text-xs text-padel-gray-400">
+                Net balances across all games:
+              </p>
+              <div className="space-y-3">
+                {settlements.map((s, i) => {
+                  const isMyDebt = s.from_id === currentUserId;
+                  const otherName = isMyDebt ? s.to_name : s.from_name;
+                  const initials = otherName
+                    .split(" ")
+                    .map((n) => n[0])
+                    .join("")
+                    .toUpperCase()
+                    .slice(0, 2);
+                  const maxAmount = Math.max(...settlements.map((x) => x.amount), 1);
+                  const barPercent = Math.min((s.amount / maxAmount) * 100, 100);
+
+                  return (
+                    <div key={i} className="flex items-center gap-3">
+                      {/* Avatar */}
+                      <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
+                        isMyDebt
+                          ? "bg-[rgba(229,57,53,0.1)] text-[#E53935]"
+                          : "bg-[rgba(204,255,0,0.15)] text-padel-teal-dark"
+                      }`}>
+                        {initials}
+                      </div>
+                      {/* Name + bar */}
+                      <div className="min-w-0 flex-1">
+                        <div className="flex items-center justify-between">
+                          <p className="text-sm font-medium text-padel-charcoal">{otherName}</p>
+                          <span className={`text-sm font-bold ${
+                            isMyDebt ? "text-[#E53935]" : "text-padel-teal-dark"
+                          }`}>
+                            {isMyDebt ? "-" : "+"}£{s.amount.toFixed(2)}
+                          </span>
+                        </div>
+                        <p className="text-[12px] text-padel-gray-400">
+                          {s.from_name} → {s.to_name}
+                        </p>
+                        {/* Balance bar */}
+                        <div className="mt-1.5 h-1 w-full rounded-full bg-padel-gray-200">
+                          <div
+                            className={`h-1 rounded-full ${isMyDebt ? "bg-[#E53935]" : "bg-padel-lime"}`}
+                            style={{ width: `${barPercent}%` }}
+                          />
+                        </div>
+                      </div>
+                      {/* Settle pill */}
+                      <button className="shrink-0 rounded-full bg-padel-lime px-3 py-1 text-[11px] font-semibold text-padel-charcoal transition-colors hover:bg-padel-lime/80">
+                        Settle
+                      </button>
                     </div>
-                    <Badge variant="outline" className="text-orange-600">
-                      ${d.amount.toFixed(2)}
-                    </Badge>
-                  </div>
-                ))}
-              </CardContent>
-            </Card>
+                  );
+                })}
+              </div>
+            </div>
           )}
 
-          {/* Owed to me */}
-          {owedToMeDebts.length > 0 && (
-            <Card>
-              <CardHeader className="pb-3">
-                <CardTitle className="text-base">Owed to Me</CardTitle>
-              </CardHeader>
-              <CardContent className="space-y-3">
+          {/* Transaction history */}
+          {(myDebts.length > 0 || owedToMeDebts.length > 0) && (
+            <div className="rounded-2xl border border-padel-gray-200 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+              <h3 className="mb-3 text-base font-semibold text-padel-charcoal">Transaction History</h3>
+              <div className="space-y-3">
                 {owedToMeDebts.map((d, i) => (
                   <div
-                    key={`${d.booking_id}-${i}`}
-                    className="flex items-center justify-between"
+                    key={`owed-${d.booking_id}-${i}`}
+                    className="flex items-center gap-3"
                   >
-                    <div>
-                      <p className="text-sm font-medium">{d.from_name}</p>
-                      <p className="text-xs text-muted-foreground">
-                        {d.venue_name} ·{" "}
+                    {/* Type icon — incoming */}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(204,255,0,0.15)" }}>
+                      <span className="text-sm">📥</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-padel-charcoal">{d.from_name}</p>
+                      <p className="text-[12px] text-padel-gray-400">
+                        {d.venue_name} &middot;{" "}
                         {new Date(d.date + "T00:00:00").toLocaleDateString(
                           "en-GB",
                           { day: "numeric", month: "short" }
                         )}
                       </p>
                     </div>
-                    <Badge variant="outline" className="text-green-600">
-                      ${d.amount.toFixed(2)}
-                    </Badge>
+                    <span className="text-sm font-bold text-padel-teal-dark">
+                      +£{d.amount.toFixed(2)}
+                    </span>
                   </div>
                 ))}
-              </CardContent>
-            </Card>
+                {myDebts.map((d, i) => (
+                  <div
+                    key={`owe-${d.booking_id}-${i}`}
+                    className="flex items-center gap-3"
+                  >
+                    {/* Type icon — outgoing */}
+                    <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-xl" style={{ background: "rgba(229,57,53,0.08)" }}>
+                      <span className="text-sm">📤</span>
+                    </div>
+                    <div className="min-w-0 flex-1">
+                      <p className="text-sm font-medium text-padel-charcoal">{d.to_name}</p>
+                      <p className="text-[12px] text-padel-gray-400">
+                        {d.venue_name} &middot;{" "}
+                        {new Date(d.date + "T00:00:00").toLocaleDateString(
+                          "en-GB",
+                          { day: "numeric", month: "short" }
+                        )}
+                      </p>
+                    </div>
+                    <span className="text-sm font-bold text-[#E53935]">
+                      -£{d.amount.toFixed(2)}
+                    </span>
+                  </div>
+                ))}
+              </div>
+            </div>
           )}
 
           {myDebts.length === 0 && owedToMeDebts.length === 0 && (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-                <Wallet className="mb-3 h-10 w-10 text-muted-foreground/50" />
-                <p className="text-sm text-muted-foreground">
+                <Wallet className="mb-3 h-10 w-10 text-padel-gray-400/50" />
+                <p className="text-sm text-padel-gray-400">
                   No outstanding payments.
                 </p>
               </CardContent>
@@ -159,40 +204,11 @@ export function BalancesView({
         </>
       )}
 
-      {/* Settle up suggestions */}
-      {settlements.length > 0 && (
-        <Card>
-          <CardHeader className="pb-3">
-            <CardTitle className="text-base">Settle Up</CardTitle>
-          </CardHeader>
-          <CardContent className="space-y-3">
-            <p className="text-xs text-muted-foreground">
-              Net balances across all games:
-            </p>
-            {settlements.map((s, i) => (
-              <div
-                key={i}
-                className="flex items-center justify-between rounded-lg border p-3"
-              >
-                <div className="flex items-center gap-2 text-sm">
-                  <span className="font-medium">{s.from_name}</span>
-                  <ArrowRight className="h-4 w-4 text-muted-foreground" />
-                  <span className="font-medium">{s.to_name}</span>
-                </div>
-                <span className="text-sm font-bold">
-                  ${s.amount.toFixed(2)}
-                </span>
-              </div>
-            ))}
-          </CardContent>
-        </Card>
-      )}
-
       {!currentUserId && (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <Wallet className="mb-3 h-10 w-10 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
+            <Wallet className="mb-3 h-10 w-10 text-padel-gray-400/50" />
+            <p className="text-sm text-padel-gray-400">
               Sign in to see your balances.
             </p>
           </CardContent>

@@ -110,7 +110,7 @@ export default function NotificationsPage() {
   if (authLoading || loading) {
     return (
       <div className="flex min-h-[40vh] items-center justify-center">
-        <p className="text-muted-foreground">Loading...</p>
+        <p className="text-padel-gray-400">Loading...</p>
       </div>
     );
   }
@@ -118,14 +118,14 @@ export default function NotificationsPage() {
   const unreadCount = notifications.filter((n) => !n.is_read).length;
 
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="mx-auto max-w-[480px] space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold">Notifications</h2>
+        <h2 className="text-lg font-semibold text-padel-charcoal">Notifications</h2>
         {unreadCount > 0 && (
           <Button
             variant="outline"
             size="sm"
-            className="gap-2"
+            className="gap-2 border-padel-teal text-padel-teal hover:bg-padel-teal hover:text-white"
             onClick={handleMarkAllRead}
           >
             <CheckCheck className="h-4 w-4" />
@@ -137,8 +137,8 @@ export default function NotificationsPage() {
       {notifications.length === 0 ? (
         <Card>
           <CardContent className="flex flex-col items-center justify-center py-8 text-center">
-            <Bell className="mb-3 h-10 w-10 text-muted-foreground/50" />
-            <p className="text-sm text-muted-foreground">
+            <Bell className="mb-3 h-10 w-10 text-padel-gray-400/50" />
+            <p className="text-sm text-padel-gray-400">
               No notifications yet.
             </p>
           </CardContent>
@@ -149,17 +149,17 @@ export default function NotificationsPage() {
             const Icon = typeIcons[n.type] || Bell;
             const content = (
               <div
-                className={`flex gap-3 rounded-lg border p-3 transition-colors ${
+                className={`flex gap-3 rounded-2xl border p-3 transition-colors ${
                   n.is_read
-                    ? "bg-card"
-                    : "border-primary/20 bg-primary/5"
+                    ? "border-padel-gray-200 bg-white"
+                    : "border-padel-teal/20 bg-padel-teal/5"
                 }`}
               >
                 <div
                   className={`mt-0.5 shrink-0 rounded-full p-1.5 ${
                     n.is_read
-                      ? "bg-muted text-muted-foreground"
-                      : "bg-primary/10 text-primary"
+                      ? "bg-padel-gray-200/60 text-padel-gray-400"
+                      : "bg-padel-teal/10 text-padel-teal"
                   }`}
                 >
                   <Icon className="h-4 w-4" />
@@ -167,13 +167,13 @@ export default function NotificationsPage() {
                 <div className="min-w-0 flex-1">
                   <p
                     className={`text-sm ${
-                      n.is_read ? "text-muted-foreground" : "font-medium"
+                      n.is_read ? "text-padel-gray-400" : "font-medium text-padel-charcoal"
                     }`}
                   >
                     {n.title}
                   </p>
-                  <p className="text-sm text-muted-foreground">{n.message}</p>
-                  <p className="mt-1 text-xs text-muted-foreground">
+                  <p className="text-sm text-padel-gray-400">{n.message}</p>
+                  <p className="mt-1 text-xs text-padel-gray-400">
                     {timeAgo(n.created_at)}
                   </p>
                 </div>
@@ -184,7 +184,7 @@ export default function NotificationsPage() {
                       e.stopPropagation();
                       handleMarkRead(n.id);
                     }}
-                    className="shrink-0 self-start rounded p-1 text-muted-foreground hover:bg-accent hover:text-foreground"
+                    className="shrink-0 self-start rounded p-1 text-padel-gray-400 hover:bg-padel-soft-gray hover:text-padel-charcoal"
                     title="Mark as read"
                   >
                     <CheckCheck className="h-4 w-4" />

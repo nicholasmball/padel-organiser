@@ -64,7 +64,7 @@ const skillColors: Record<string, string> = {
   beginner: "bg-green-100 text-green-800",
   intermediate: "bg-blue-100 text-blue-800",
   advanced: "bg-purple-100 text-purple-800",
-  pro: "bg-orange-100 text-orange-800",
+  pro: "bg-padel-orange/15 text-padel-orange",
 };
 
 export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
@@ -162,7 +162,7 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
 
       <TabsContent value="members" className="space-y-4">
         <div className="relative">
-          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-muted-foreground" />
+          <Search className="absolute left-3 top-1/2 h-4 w-4 -translate-y-1/2 text-padel-gray-400" />
           <Input
             placeholder="Search by name or email..."
             value={search}
@@ -174,7 +174,7 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
         {filtered.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center py-8">
-              <p className="text-sm text-muted-foreground">No members found.</p>
+              <p className="text-sm text-padel-gray-400">No members found.</p>
             </CardContent>
           </Card>
         ) : (
@@ -184,7 +184,7 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
                 <CardContent className="pt-4">
                   <div className="flex items-start justify-between gap-4">
                     <div className="flex items-center gap-3 min-w-0">
-                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-primary/10 text-sm font-medium text-primary">
+                      <div className="flex h-10 w-10 shrink-0 items-center justify-center rounded-full bg-padel-teal/10 text-sm font-medium text-padel-teal">
                         {profile.full_name
                           .split(" ")
                           .map((n) => n[0])
@@ -194,16 +194,16 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
                       </div>
                       <div className="min-w-0">
                         <div className="flex items-center gap-2">
-                          <p className="font-medium truncate">
+                          <p className="font-medium truncate text-padel-charcoal">
                             {profile.full_name}
                           </p>
                           {profile.is_admin && (
-                            <Badge variant="default" className="text-xs shrink-0">
+                            <Badge variant="default" className="text-xs shrink-0 bg-padel-teal text-white">
                               Admin
                             </Badge>
                           )}
                         </div>
-                        <p className="text-sm text-muted-foreground truncate">
+                        <p className="text-sm text-padel-gray-400 truncate">
                           {profile.email}
                         </p>
                         {profile.skill_level && (
@@ -260,7 +260,7 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
                           <AlertDialogFooter>
                             <AlertDialogCancel>Cancel</AlertDialogCancel>
                             <AlertDialogAction
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              className="bg-padel-red text-white hover:bg-padel-red/90"
                               onClick={() => handleDeleteUser(profile.id)}
                             >
                               Delete
@@ -310,7 +310,7 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
                               Cancel
                             </AlertDialogCancel>
                             <AlertDialogAction
-                              className="bg-destructive text-destructive-foreground hover:bg-destructive/90"
+                              className="bg-padel-red text-white hover:bg-padel-red/90"
                               onClick={() => handleBlacklistUser(profile.id)}
                             >
                               Blacklist
@@ -330,7 +330,7 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
       <TabsContent value="blacklist" className="space-y-4">
         <Card>
           <CardHeader>
-            <CardTitle className="text-base">Add to Blacklist</CardTitle>
+            <CardTitle className="text-base text-padel-charcoal">Add to Blacklist</CardTitle>
           </CardHeader>
           <CardContent>
             <form onSubmit={handleAddToBlacklist} className="flex flex-col gap-3 sm:flex-row">
@@ -351,7 +351,7 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
               <Button
                 type="submit"
                 disabled={busy === "add-blacklist"}
-                className="gap-2 shrink-0"
+                className="gap-2 shrink-0 bg-padel-teal text-white hover:bg-padel-teal-dark"
               >
                 <Plus className="h-4 w-4" />
                 Add
@@ -363,7 +363,7 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
         {blacklist.length === 0 ? (
           <Card>
             <CardContent className="flex items-center justify-center py-8">
-              <p className="text-sm text-muted-foreground">
+              <p className="text-sm text-padel-gray-400">
                 No blacklisted emails.
               </p>
             </CardContent>
@@ -375,15 +375,15 @@ export function AdminPanel({ profiles, blacklist }: AdminPanelProps) {
                 <CardContent className="flex items-center justify-between gap-4 pt-4">
                   <div className="min-w-0">
                     <div className="flex items-center gap-2">
-                      <UserX className="h-4 w-4 text-destructive shrink-0" />
+                      <UserX className="h-4 w-4 text-padel-red shrink-0" />
                       <p className="font-medium truncate">{entry.email}</p>
                     </div>
                     {entry.reason && (
-                      <p className="mt-1 text-sm text-muted-foreground truncate">
+                      <p className="mt-1 text-sm text-padel-gray-400 truncate">
                         {entry.reason}
                       </p>
                     )}
-                    <p className="text-xs text-muted-foreground mt-1">
+                    <p className="text-xs text-padel-gray-400 mt-1">
                       {new Date(entry.created_at).toLocaleDateString()}
                     </p>
                   </div>

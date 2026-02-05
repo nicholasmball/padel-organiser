@@ -12,9 +12,9 @@ const pageTitles: Record<string, string> = {
   "/": "Home",
   "/calendar": "Calendar",
   "/bookings/new": "New Booking",
-  "/my-games": "My Games",
-  "/members": "Members",
-  "/balances": "Balances",
+  "/my-games": "My Padel Games History",
+  "/members": "Padel Member Directory",
+  "/balances": "Padel Wallet & Balances",
   "/profile": "Profile",
   "/notifications": "Notifications",
   "/auth/sign-in": "Sign In",
@@ -41,9 +41,9 @@ export function Header() {
     .slice(0, 2) || "?";
 
   return (
-    <header className="sticky top-0 z-40 border-b bg-card/95 backdrop-blur supports-[backdrop-filter]:bg-card/60">
+    <header className="sticky top-0 z-40 border-b border-padel-gray-200 bg-white/95 backdrop-blur supports-[backdrop-filter]:bg-white/60">
       <div className="flex h-14 items-center justify-between px-4 md:px-6">
-        <h1 className="text-lg font-semibold">{title}</h1>
+        <h1 className="text-lg font-semibold text-padel-charcoal">{title}</h1>
         {!loading && (
           <div className="flex items-center gap-2">
             {user && !pathname.startsWith("/auth/") ? (
@@ -51,7 +51,7 @@ export function Header() {
                 <NotificationBell />
                 <Link href="/profile">
                   <Avatar className="h-8 w-8 cursor-pointer">
-                    <AvatarFallback className="bg-primary text-primary-foreground text-xs">
+                    <AvatarFallback className="bg-padel-teal text-white text-xs">
                       {initials}
                     </AvatarFallback>
                   </Avatar>

@@ -106,7 +106,7 @@ export default async function BookingPage({ params }: PageProps) {
   const b = booking as Record<string, unknown>;
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="mx-auto max-w-[480px]">
       <BookingDetail
         booking={{
           id: b.id as string,
