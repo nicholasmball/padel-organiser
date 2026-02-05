@@ -1,8 +1,10 @@
 "use client";
 
+import { useEffect, useState } from "react";
 import Link from "next/link";
 import { usePathname } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { checkIsAdmin } from "@/lib/actions/admin";
 import {
   Home,
   Calendar,
@@ -11,6 +13,7 @@ import {
   User,
   Wallet,
   History,
+  Shield,
 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -27,11 +30,22 @@ const authItems = [
   { href: "/profile", label: "Profile", icon: User },
 ];
 
+const adminItem = { href: "/admin", label: "Admin", icon: Shield };
+
 export function SideNav() {
   const pathname = usePathname();
   const { user } = useAuth();
+  const [isAdmin, setIsAdmin] = useState(false);
 
-  const navItems = [...publicItems, ...authItems];
+  useEffect(() => {
+    if (!user) {
+      setIsAdmin(false);
+      return;
+    }
+    checkIsAdmin().then(setIsAdmin);
+  }, [user]);
+
+  const navItems = [...publicItems, ...authItems, ...(isAdmin ? [adminItem] : [])];
 
   if (!user || pathname.startsWith("/auth/")) return null;
 

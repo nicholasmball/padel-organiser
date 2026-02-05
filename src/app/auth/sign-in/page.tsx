@@ -1,7 +1,7 @@
 "use client";
 
 import { useState } from "react";
-import { useRouter } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
 import { Button } from "@/components/ui/button";
@@ -18,6 +18,8 @@ import {
 
 export default function SignInPage() {
   const router = useRouter();
+  const searchParams = useSearchParams();
+  const blocked = searchParams.get("blocked") === "true";
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -56,6 +58,12 @@ export default function SignInPage() {
         </CardHeader>
         <form onSubmit={handleSubmit}>
           <CardContent className="space-y-4">
+            {blocked && (
+              <div className="rounded-md bg-destructive/10 p-3 text-sm text-destructive">
+                Your account has been suspended. Please contact an administrator
+                if you believe this is an error.
+              </div>
+            )}
             <div className="space-y-2">
               <Label htmlFor="email">Email</Label>
               <Input

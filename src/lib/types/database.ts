@@ -10,6 +10,7 @@ export type Database = {
           skill_level: "beginner" | "intermediate" | "advanced" | "pro" | null;
           avatar_url: string | null;
           email_notifications: boolean;
+          is_admin: boolean;
           created_at: string;
         };
         Insert: {
@@ -25,6 +26,7 @@ export type Database = {
             | null;
           avatar_url?: string | null;
           email_notifications?: boolean;
+          is_admin?: boolean;
           created_at?: string;
         };
         Update: {
@@ -40,6 +42,7 @@ export type Database = {
             | null;
           avatar_url?: string | null;
           email_notifications?: boolean;
+          is_admin?: boolean;
           created_at?: string;
         };
         Relationships: [];
@@ -343,6 +346,38 @@ export type Database = {
           fetched_at?: string;
         };
         Relationships: [];
+      };
+      blacklist: {
+        Row: {
+          id: string;
+          email: string;
+          reason: string | null;
+          blacklisted_by: string | null;
+          created_at: string;
+        };
+        Insert: {
+          id?: string;
+          email: string;
+          reason?: string | null;
+          blacklisted_by?: string | null;
+          created_at?: string;
+        };
+        Update: {
+          id?: string;
+          email?: string;
+          reason?: string | null;
+          blacklisted_by?: string | null;
+          created_at?: string;
+        };
+        Relationships: [
+          {
+            foreignKeyName: "blacklist_blacklisted_by_fkey";
+            columns: ["blacklisted_by"];
+            isOneToOne: false;
+            referencedRelation: "profiles";
+            referencedColumns: ["id"];
+          },
+        ];
       };
     };
     Views: Record<string, never>;

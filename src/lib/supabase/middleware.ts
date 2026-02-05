@@ -1,4 +1,5 @@
 import { createServerClient } from "@supabase/ssr";
+import { createClient as createSupabaseClient } from "@supabase/supabase-js";
 import { NextResponse, type NextRequest } from "next/server";
 
 const publicPaths = ["/auth/sign-in", "/auth/sign-up", "/auth/callback", "/api/"];
@@ -39,6 +40,27 @@ export async function updateSession(request: NextRequest) {
   const {
     data: { user },
   } = await supabase.auth.getUser();
+
+  // Check blacklist for authenticated users
+  if (user?.email) {
+    const admin = createSupabaseClient(
+      process.env.NEXT_PUBLIC_SUPABASE_URL!,
+      process.env.SUPABASE_SERVICE_ROLE_KEY!
+    );
+    const { data: blocked } = await admin
+      .from("blacklist")
+      .select("id")
+      .eq("email", user.email.toLowerCase())
+      .single();
+
+    if (blocked) {
+      await supabase.auth.signOut();
+      const url = request.nextUrl.clone();
+      url.pathname = "/auth/sign-in";
+      url.searchParams.set("blocked", "true");
+      return NextResponse.redirect(url);
+    }
+  }
 
   // Redirect unauthenticated users to sign-in (except public paths)
   if (!user && !isPublicPath(request.nextUrl.pathname)) {

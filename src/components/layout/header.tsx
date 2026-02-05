@@ -19,6 +19,7 @@ const pageTitles: Record<string, string> = {
   "/notifications": "Notifications",
   "/auth/sign-in": "Sign In",
   "/auth/sign-up": "Sign Up",
+  "/admin": "Admin",
 };
 
 function getTitle(pathname: string): string {

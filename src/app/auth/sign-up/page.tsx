@@ -4,6 +4,7 @@ import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { createClient } from "@/lib/supabase/client";
+import { isEmailBlacklisted } from "@/lib/actions/admin";
 import { Button } from "@/components/ui/button";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
@@ -29,6 +30,13 @@ export default function SignUpPage() {
     e.preventDefault();
     setError(null);
     setLoading(true);
+
+    const blocked = await isEmailBlacklisted(email);
+    if (blocked) {
+      setError("This email address is not allowed to sign up. Please contact an administrator.");
+      setLoading(false);
+      return;
+    }
 
     const supabase = createClient();
 
