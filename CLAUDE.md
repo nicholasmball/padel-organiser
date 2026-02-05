@@ -23,11 +23,13 @@ src/
 │   ├── calendar/           # Monthly calendar with availability overlay
 │   ├── members/            # Member directory
 │   ├── my-games/           # User's game history and stats
+│   ├── admin/              # Admin panel (user management + blacklist)
 │   ├── notifications/      # Notification centre
 │   ├── profile/            # User profile + availability management
 │   ├── error.tsx           # Global error boundary
 │   └── loading.tsx         # Home page loading skeleton
 ├── components/
+│   ├── admin/              # AdminPanel (members tab + blacklist tab)
 │   ├── availability/       # AvailabilityManager, CalendarView
 │   ├── balances/           # BalancesView
 │   ├── bookings/           # BookingForm, BookingCard, BookingDetail, CommentsSection
@@ -38,7 +40,7 @@ src/
 ├── hooks/
 │   └── use-auth.ts         # Client-side auth state hook
 └── lib/
-    ├── actions/            # Server Actions (bookings, comments, notifications, payments, availability, account)
+    ├── actions/            # Server Actions (bookings, comments, notifications, payments, availability, account, admin)
     ├── supabase/           # Supabase clients (client, server, admin, middleware)
     ├── types/database.ts   # Full Supabase Database types (must include Relationships arrays)
     ├── ensure-profile.ts   # Auto-creates profile row if missing
@@ -49,23 +51,32 @@ src/
 
 - **Server Components** for data fetching (pages), **Client Components** for interactivity (forms, buttons)
 - **Server Actions** (`"use server"`) for all mutations — no API routes except weather
-- **Admin client** (`createAdminClient`) uses service role key to bypass RLS for cross-user operations: waitlist promotion, payment toggling, notification creation, comment pinning, account deletion
+- **Admin client** (`createAdminClient`) uses service role key to bypass RLS for cross-user operations: waitlist promotion, payment toggling, notification creation, comment pinning, account deletion, admin user management, blacklisting
 - **`ensureProfile()`** called before booking creation/signup to auto-create missing profile rows
 - **Geocoding** is automatic — addresses are geocoded server-side in booking create/update actions using Nominatim, with UK postcode fallback if full address fails
 - **Weather** is cached in `weather_cache` table with 3-hour TTL
 
 ## Auth & Navigation
 
-- **Middleware** (`src/lib/supabase/middleware.ts`) redirects unauthenticated users to `/auth/sign-in` and authenticated users away from auth pages
+- **Middleware** (`src/lib/supabase/middleware.ts`) redirects unauthenticated users to `/auth/sign-in` and authenticated users away from auth pages. Also checks blacklist for authenticated users — signs out + redirects with `?blocked=true` if blacklisted.
 - **Side nav, bottom nav, and header controls** are hidden when signed out or on auth pages (prevents flash during sign-in transition)
 - `useAuth()` hook tracks client-side auth state via Supabase `onAuthStateChange`
 - Public paths: `/auth/sign-in`, `/auth/sign-up`, `/auth/callback`, `/api/*`
 
+## Admin & Blacklisting
+
+- **Admin role**: `profiles.is_admin` boolean column. Admin nav link (Shield icon) only visible to admins via `checkIsAdmin()`.
+- **Admin panel** (`/admin`): server component checks admin status, redirects non-admins to `/`. Two tabs — Members (search, toggle admin, delete, blacklist) and Blacklist (view, unblock, manually add email).
+- **`requireAdmin()`** helper in `src/lib/actions/admin.ts` gates all admin server actions — verifies auth + `is_admin` flag.
+- **Blacklist enforcement** at 3 points: sign-up (pre-check), auth callback (post-code-exchange), and middleware (every request).
+- **Delete user flow** (admin): notifications → profile (cascades) → auth user (same as self-delete).
+- **Blacklist user flow**: delete account + add email to `blacklist` table. Prevents re-signup and signs out active sessions.
+
 ## Database
 
-8 tables: `profiles`, `availability`, `unavailable_dates`, `bookings`, `signups`, `comments`, `weather_cache`, `notifications`
+9 tables: `profiles`, `availability`, `unavailable_dates`, `bookings`, `signups`, `comments`, `weather_cache`, `notifications`, `blacklist`
 
-All tables use Row Level Security. Most tables cascade delete from `profiles`. Delete account order: notifications → profile (cascades rest) → auth user.
+All tables use Row Level Security. Most tables cascade delete from `profiles`. Delete account order: notifications → profile (cascades rest) → auth user. The `blacklist` table stores banned emails with optional reason and `blacklisted_by` reference.
 
 ## Gotchas
 
