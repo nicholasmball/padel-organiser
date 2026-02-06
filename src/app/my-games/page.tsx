@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
@@ -5,6 +6,7 @@ import { BookingCard } from "@/components/bookings/booking-card";
 import { Trophy, Calendar, PoundSterling } from "lucide-react";
 import Link from "next/link";
 
+export const metadata: Metadata = { title: "My Games" };
 export const dynamic = "force-dynamic";
 
 export default async function MyGamesPage() {

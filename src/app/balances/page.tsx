@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { BalancesView } from "@/components/balances/balances-view";
 
+export const metadata: Metadata = { title: "Wallet" };
 export const dynamic = "force-dynamic";
 
 export default async function BalancesPage() {

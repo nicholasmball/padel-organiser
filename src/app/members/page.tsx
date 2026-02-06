@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { MembersList } from "@/components/members/members-list";
 
+export const metadata: Metadata = { title: "Members" };
 export const dynamic = "force-dynamic";
 
 export default async function MembersPage() {

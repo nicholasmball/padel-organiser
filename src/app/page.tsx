@@ -1,9 +1,11 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { Card, CardContent } from "@/components/ui/card";
 import { Calendar, Users } from "lucide-react";
 import Link from "next/link";
 import { PadelHero } from "@/components/ui/padel-hero";
 
+export const metadata: Metadata = { title: "Home" };
 export const dynamic = "force-dynamic";
 
 function formatDate(dateStr: string) {

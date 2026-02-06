@@ -12,7 +12,10 @@ const inter = Inter({
 });
 
 export const metadata: Metadata = {
-  title: "Padel Organiser",
+  title: {
+    default: "Padel Organiser",
+    template: "%s | Padel Organiser",
+  },
   description: "Organise padel games with your community",
 };
 

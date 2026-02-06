@@ -1,3 +1,4 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { notFound } from "next/navigation";
 import { BookingDetail } from "@/components/bookings/booking-detail";
@@ -5,6 +6,18 @@ import { CommentsSection } from "@/components/bookings/comments-section";
 
 interface PageProps {
   params: Promise<{ id: string }>;
+}
+
+export async function generateMetadata({ params }: PageProps): Promise<Metadata> {
+  const { id } = await params;
+  const supabase = await createClient();
+  const { data } = await supabase
+    .from("bookings")
+    .select("venue_name")
+    .eq("id", id)
+    .single();
+  const name = data ? (data as Record<string, unknown>).venue_name as string : "Booking";
+  return { title: name };
 }
 
 export default async function BookingPage({ params }: PageProps) {

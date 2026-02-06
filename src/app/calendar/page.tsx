@@ -1,6 +1,8 @@
+import type { Metadata } from "next";
 import { createClient } from "@/lib/supabase/server";
 import { CalendarView } from "@/components/availability/calendar-view";
 
+export const metadata: Metadata = { title: "Calendar" };
 export const dynamic = "force-dynamic";
 
 export default async function CalendarPage() {
