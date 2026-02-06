@@ -58,7 +58,7 @@ export default function EditBookingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="max-w-2xl">
       <BookingForm
         mode="edit"
         bookingId={bookingId}

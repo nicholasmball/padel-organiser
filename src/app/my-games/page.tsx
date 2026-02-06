@@ -1,7 +1,6 @@
 import { createClient } from "@/lib/supabase/server";
 import { redirect } from "next/navigation";
 import { Card, CardContent } from "@/components/ui/card";
-import { Badge } from "@/components/ui/badge";
 import { BookingCard } from "@/components/bookings/booking-card";
 import { Trophy, Calendar, PoundSterling } from "lucide-react";
 import Link from "next/link";
@@ -180,77 +179,48 @@ export default async function MyGamesPage() {
               const maxP = b.max_players as number;
               const cost = b.total_cost as number;
               const costPerPlayer = confirmed > 0 ? cost / confirmed : cost / maxP;
-              const playerIds = confirmedUsersByBooking.get(bid) || [];
+              const status = b.status as string;
 
               return (
                 <Link key={bid} href={`/bookings/${bid}`}>
-                  <Card className="transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_12px_24px_rgba(0,128,128,0.08)] border-l-4 border-l-padel-lime">
-                    <CardContent className="space-y-3 pt-4 pb-4">
-                      <p className="text-lg font-bold text-padel-charcoal">{b.venue_name as string}</p>
-                      <p className="text-sm text-padel-gray-400">
-                        {formatDate(b.date as string)}, {(b.start_time as string).slice(0, 5)} - {(b.end_time as string).slice(0, 5)}
-                      </p>
-
-                      {/* Player avatars */}
-                      {playerIds.length > 0 && (
-                        <div className="flex items-center gap-3">
-                          {playerIds.slice(0, 4).map((pid) => {
-                            const name = playerNameMap.get(pid) || "?";
-                            const initials = name
-                              .split(" ")
-                              .map((n: string) => n[0])
-                              .join("")
-                              .toUpperCase()
-                              .slice(0, 2);
-                            const firstName = name.split(" ")[0];
-                            return (
-                              <div key={pid} className="flex flex-col items-center gap-1">
-                                <div className="flex h-9 w-9 items-center justify-center rounded-full bg-padel-teal text-xs font-medium text-white">
-                                  {initials}
-                                </div>
-                                <span className="text-xs text-padel-gray-400">{firstName}</span>
-                              </div>
-                            );
-                          })}
-                          {playerIds.length > 4 && (
-                            <div className="flex flex-col items-center gap-1">
-                              <div className="flex h-9 w-9 items-center justify-center rounded-full bg-padel-gray-200 text-xs font-medium text-padel-gray-400">
-                                +{playerIds.length - 4}
-                              </div>
-                              <span className="text-xs text-padel-gray-400">more</span>
-                            </div>
-                          )}
+                  <div className={`flex items-center justify-between rounded-2xl border border-padel-gray-200 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(0,128,128,0.08)]`}>
+                    <div className="min-w-0 flex-1">
+                      <div className="flex items-center gap-2">
+                        <p className="truncate text-[15px] font-semibold text-padel-charcoal">{b.venue_name as string}</p>
+                        <span className={`inline-block shrink-0 rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+                          (b.is_outdoor as boolean) ? "bg-padel-teal/10 text-padel-teal-dark" : "bg-blue-100 text-blue-800"
+                        }`}>
+                          {(b.is_outdoor as boolean) ? "Outdoor" : "Indoor"}
+                        </span>
+                      </div>
+                      <div className="mt-1 flex flex-wrap items-center gap-x-3 text-[13px] text-padel-gray-400">
+                        <span>{formatDate(b.date as string)}</span>
+                        <span>{(b.start_time as string).slice(0, 5)} - {(b.end_time as string).slice(0, 5)}</span>
+                        <span>{confirmed}/{maxP} players</span>
+                      </div>
+                    </div>
+                    <div className="ml-3 flex flex-col items-end gap-1.5">
+                      {cost > 0 && (
+                        <div className="flex flex-col items-end">
+                          <span className="text-sm font-bold text-padel-charcoal">
+                            £{costPerPlayer.toFixed(2)}<span className="text-[11px] font-normal text-padel-gray-400">/pp</span>
+                          </span>
+                          <span className="text-[11px] text-padel-gray-400">
+                            £{cost.toFixed(2)} total
+                          </span>
                         </div>
                       )}
-
-                      {/* Badges + cost */}
-                      <div className="flex items-center justify-between">
-                        <div className="flex items-center gap-1.5">
-                          <Badge
-                            variant="secondary"
-                            className={`text-[11px] font-semibold uppercase tracking-[0.05em] ${(b.is_outdoor as boolean) ? "bg-padel-teal/10 text-padel-teal-dark" : "bg-blue-100 text-blue-800"}`}
-                          >
-                            {(b.is_outdoor as boolean) ? "Outdoor" : "Indoor"}
-                          </Badge>
-                          <Badge
-                            variant="secondary"
-                            className={`text-[11px] font-semibold uppercase tracking-[0.05em] ${(b.status as string) === "full" ? "bg-padel-teal text-white" : "bg-padel-lime text-padel-charcoal"}`}
-                          >
-                            {(b.status as string).charAt(0).toUpperCase() + (b.status as string).slice(1)}
-                          </Badge>
-                        </div>
-                        {cost > 0 && (
-                          <span className="text-sm font-medium text-padel-charcoal">
-                            £{costPerPlayer.toFixed(2)}/player
-                          </span>
-                        )}
-                      </div>
-
-                      <p className="text-xs text-padel-gray-400">
-                        Organised by {organiserMap.get(b.organiser_id as string) || "Unknown"}
-                      </p>
-                    </CardContent>
-                  </Card>
+                      <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
+                        status === "open"
+                          ? "bg-padel-lime text-padel-charcoal"
+                          : status === "full"
+                            ? "bg-padel-teal text-white"
+                            : "bg-padel-teal text-white"
+                      }`}>
+                        {status === "open" ? "Open" : status === "full" ? "Full" : "Confirmed"}
+                      </span>
+                    </div>
+                  </div>
                 </Link>
               );
             })}

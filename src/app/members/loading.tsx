@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function MembersLoading() {
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="max-w-2xl space-y-4">
       <Skeleton className="h-10 w-full rounded-md" />
       <div className="flex gap-2">
         <Skeleton className="h-8 w-20 rounded-md" />

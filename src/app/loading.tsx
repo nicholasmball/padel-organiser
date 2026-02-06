@@ -3,7 +3,7 @@ import { CardListSkeleton } from "@/components/ui/page-skeleton";
 
 export default function HomeLoading() {
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div className="space-y-1">
         <Skeleton className="h-8 w-64" />
         <Skeleton className="h-5 w-80" />

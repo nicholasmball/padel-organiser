@@ -11,7 +11,7 @@ export default function Error({
   reset: () => void;
 }) {
   return (
-    <div className="mx-auto max-w-2xl py-12">
+    <div className="max-w-2xl py-12">
       <Card>
         <CardContent className="flex flex-col items-center justify-center py-12 text-center">
           <AlertTriangle className="mb-4 h-10 w-10 text-destructive" />

@@ -3,7 +3,7 @@ import { Card, CardContent, CardHeader } from "@/components/ui/card";
 
 export default function BalancesLoading() {
   return (
-    <div className="mx-auto max-w-2xl space-y-4">
+    <div className="max-w-2xl space-y-4">
       <div className="grid grid-cols-2 gap-3">
         <Card>
           <CardContent className="py-4">

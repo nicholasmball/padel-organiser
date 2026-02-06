@@ -3,7 +3,7 @@ import { StatsSkeleton, CardListSkeleton } from "@/components/ui/page-skeleton";
 
 export default function MyGamesLoading() {
   return (
-    <div className="mx-auto max-w-2xl space-y-6">
+    <div className="max-w-2xl space-y-6">
       <Skeleton className="h-8 w-32" />
       <StatsSkeleton />
       <div className="space-y-3">

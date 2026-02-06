@@ -174,8 +174,15 @@ export default async function Home() {
 
       {/* My upcoming games — compact flex-row cards */}
       {user && (
-        <section className="space-y-3">
-          <h3 className="text-lg font-semibold text-padel-charcoal">My Upcoming Games</h3>
+        <section className="-mx-4 rounded-2xl bg-padel-teal/5 px-4 py-4 space-y-3 md:-mx-0 md:px-5">
+          <div className="flex items-center gap-2">
+            <h3 className="text-lg font-semibold text-padel-charcoal">My Upcoming Games</h3>
+            {myGames.length > 0 && (
+              <span className="flex h-5 min-w-5 items-center justify-center rounded-full bg-padel-teal px-1.5 text-[11px] font-bold text-white">
+                {myGames.length}
+              </span>
+            )}
+          </div>
           {myGames.length === 0 ? (
             <Card>
               <CardContent className="flex flex-col items-center justify-center py-8 text-center">
@@ -183,9 +190,12 @@ export default async function Home() {
                 <p className="text-sm text-padel-gray-400">
                   No upcoming games yet.
                 </p>
-                <p className="text-sm text-padel-gray-400">
-                  Sign up for an open game or create a booking.
-                </p>
+                <Link
+                  href="/bookings/new"
+                  className="mt-3 inline-block rounded-xl bg-padel-teal px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-padel-teal-dark"
+                >
+                  Create a Booking
+                </Link>
               </CardContent>
             </Card>
           ) : (
@@ -197,11 +207,10 @@ export default async function Home() {
                 const max = b.max_players as number;
                 const costPerPlayer = confirmed > 0 ? (b.total_cost as number) / confirmed : (b.total_cost as number) / max;
                 const isWaitlisted = myStatus === "waitlist";
-                const borderColor = isWaitlisted || status === "full" ? "border-l-padel-orange" : "border-l-padel-lime";
 
                 return (
                   <Link key={b.id as string} href={`/bookings/${b.id as string}`}>
-                    <div className={`flex items-center justify-between rounded-2xl border border-padel-gray-200 border-l-4 ${borderColor} bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(0,128,128,0.08)]`}>
+                    <div className="flex items-center justify-between rounded-2xl border border-padel-gray-200 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(0,128,128,0.08)]">
                       <div className="min-w-0 flex-1">
                         <div className="flex items-center gap-2">
                           <p className="truncate text-[15px] font-semibold text-padel-charcoal">{b.venue_name as string}</p>
@@ -219,9 +228,14 @@ export default async function Home() {
                       </div>
                       <div className="ml-3 flex flex-col items-end gap-1.5">
                         {(b.total_cost as number) > 0 && (
-                          <span className="text-sm font-bold text-padel-charcoal">
-                            £{costPerPlayer.toFixed(2)}
-                          </span>
+                          <div className="flex flex-col items-end">
+                            <span className="text-sm font-bold text-padel-charcoal">
+                              £{costPerPlayer.toFixed(2)}<span className="text-[11px] font-normal text-padel-gray-400">/pp</span>
+                            </span>
+                            <span className="text-[11px] text-padel-gray-400">
+                              £{(b.total_cost as number).toFixed(2)} total
+                            </span>
+                          </div>
                         )}
                         <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
                           status === "open"
@@ -261,9 +275,12 @@ export default async function Home() {
               <p className="text-sm text-padel-gray-400">
                 No open games right now.
               </p>
-              <p className="text-sm text-padel-gray-400">
-                Check back later or create one yourself.
-              </p>
+              <Link
+                href="/bookings/new"
+                className="mt-3 inline-block rounded-xl bg-padel-teal px-5 py-2 text-sm font-semibold text-white transition-colors hover:bg-padel-teal-dark"
+              >
+                Create a Booking
+              </Link>
             </CardContent>
           </Card>
         ) : openGames.length === 0 ? (
@@ -280,6 +297,8 @@ export default async function Home() {
               const confirmed = confirmedCounts.get(b.id as string) || 0;
               const max = b.max_players as number;
               const spotsLeft = max - confirmed;
+              const cost = b.total_cost as number;
+              const costPP = confirmed > 0 ? cost / confirmed : cost / max;
 
               return (
                 <Link
@@ -309,11 +328,23 @@ export default async function Home() {
                           <span>{formatTime(b.start_time as string)} - {formatTime(b.end_time as string)}</span>
                         </div>
                       </div>
-                      <p className="text-[13px] font-semibold text-padel-teal">
-                        {spotsLeft > 0
-                          ? `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`
-                          : "Full"}
-                      </p>
+                      <div className="flex items-center justify-between">
+                        <p className="text-[13px] font-semibold text-padel-teal">
+                          {spotsLeft > 0
+                            ? `${spotsLeft} spot${spotsLeft !== 1 ? "s" : ""} left`
+                            : "Full"}
+                        </p>
+                        {cost > 0 && (
+                          <div className="text-right">
+                            <p className="text-[13px] font-bold text-padel-charcoal">
+                              £{costPP.toFixed(2)}<span className="text-[11px] font-normal text-padel-gray-400">/pp</span>
+                            </p>
+                            <p className="text-[11px] text-padel-gray-400">
+                              £{cost.toFixed(2)} total
+                            </p>
+                          </div>
+                        )}
+                      </div>
                     </div>
                     <div className="px-4 pb-4">
                       <div className="w-full rounded-xl bg-padel-teal py-2.5 text-center text-[13px] font-semibold text-white">

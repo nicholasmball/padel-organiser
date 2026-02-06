@@ -24,7 +24,7 @@ export default function NewBookingPage() {
   }
 
   return (
-    <div className="mx-auto max-w-2xl">
+    <div className="max-w-2xl">
       <BookingForm mode="create" />
     </div>
   );
