@@ -12,7 +12,7 @@ export default async function AdminPage() {
   const { profiles, blacklist } = await getAdminData();
 
   return (
-    <div className="mx-auto max-w-[480px]">
+    <div className="max-w-2xl">
       <AdminPanel profiles={profiles} blacklist={blacklist} />
     </div>
   );

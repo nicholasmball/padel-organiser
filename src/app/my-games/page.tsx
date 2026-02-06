@@ -124,7 +124,7 @@ export default async function MyGamesPage() {
   }
 
   return (
-    <div className="mx-auto max-w-[480px] space-y-6">
+    <div className="max-w-2xl space-y-6">
       <div>
         <h2 className="text-2xl font-bold tracking-tight text-padel-charcoal" style={{ letterSpacing: "-0.01em" }}>My Padel Games History</h2>
         <p className="text-sm text-padel-gray-400">Organized by &lsquo;Padel Organiser&rsquo;</p>

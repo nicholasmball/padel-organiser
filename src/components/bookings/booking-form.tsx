@@ -110,7 +110,7 @@ export function BookingForm({ mode, bookingId, defaultValues }: BookingFormProps
   }
 
   return (
-    <div className="mx-auto max-w-[480px] space-y-6">
+    <div className="max-w-2xl space-y-6">
       {/* Header with cancel */}
       <div className="flex items-center justify-between">
         <h2 className="text-lg font-semibold text-padel-charcoal">

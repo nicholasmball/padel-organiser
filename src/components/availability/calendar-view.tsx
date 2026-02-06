@@ -165,7 +165,7 @@ export function CalendarView({
   const todayStr = `${today.getFullYear()}-${String(today.getMonth() + 1).padStart(2, "0")}-${String(today.getDate()).padStart(2, "0")}`;
 
   return (
-    <div className="mx-auto max-w-[480px] space-y-4">
+    <div className="max-w-2xl space-y-4">
       {/* Calendar in white card */}
       <div className="overflow-hidden rounded-[20px] border border-padel-gray-200 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
         {/* Month nav */}

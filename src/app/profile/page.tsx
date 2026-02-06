@@ -216,7 +216,7 @@ export default function ProfilePage() {
     .slice(0, 2) || "?";
 
   return (
-    <div className="mx-auto max-w-[480px] space-y-6">
+    <div className="max-w-2xl space-y-6">
       {/* Hero section — centered */}
       <div className="flex flex-col items-center pt-2">
         {/* Avatar with teal ring */}

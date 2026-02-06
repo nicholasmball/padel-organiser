@@ -58,7 +58,7 @@ export function BalancesView({
   const owedToMeDebts = debts.filter((d) => d.to_id === currentUserId);
 
   return (
-    <div className="mx-auto max-w-[480px] space-y-4">
+    <div className="max-w-2xl space-y-4">
       {currentUserId && (
         <>
           {/* Balance hero — 2 boxes side by side */}

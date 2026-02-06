@@ -149,7 +149,7 @@ export default async function Home() {
   const firstName = fullName?.split(" ")[0];
 
   return (
-    <div className="mx-auto max-w-[480px] space-y-6">
+    <div className="max-w-2xl space-y-6">
       <section className="space-y-1">
         <h2 className="text-2xl font-bold tracking-tight text-padel-charcoal" style={{ letterSpacing: "-0.01em" }}>
           {user && firstName ? (

@@ -77,7 +77,7 @@ export function MembersList({ profiles, availability }: MembersListProps) {
   });
 
   return (
-    <div className="mx-auto max-w-[480px] space-y-4">
+    <div className="max-w-2xl space-y-4">
       <p className="text-[13px] text-padel-gray-400">{profiles.length} members</p>
 
       {/* Search */}
