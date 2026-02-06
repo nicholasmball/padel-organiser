@@ -132,7 +132,7 @@ export function CommentsSection({
         <div className="max-w-[75%]">
           <div
             className={`relative rounded-2xl px-3.5 py-2.5 ${
-              comment.is_pinned ? "border-l-[3px] border-l-padel-lime" : ""
+              comment.is_pinned ? "border-l-4 border-l-padel-lime" : ""
             } ${
               isOwn
                 ? "rounded-br-[4px] bg-[rgba(0,128,128,0.06)]"
