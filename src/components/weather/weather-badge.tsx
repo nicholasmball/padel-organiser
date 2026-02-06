@@ -102,13 +102,13 @@ export function WeatherBadge({
 
   if (compact) {
     return (
-      <div className="flex items-center gap-1">
-        <WeatherIcon className="h-4 w-4 text-muted-foreground" />
-        <span className="text-xs text-muted-foreground">
-          {Math.round(weather.temperature_max)}°
+      <div className="flex items-center gap-1.5">
+        <WeatherIcon className="h-5 w-5 text-white" />
+        <span className="text-sm font-medium text-white">
+          {Math.round(weather.temperature_max)}°C
         </span>
         {rainWarning && (
-          <AlertTriangle className="h-3.5 w-3.5 text-amber-500" />
+          <AlertTriangle className="h-4 w-4 text-amber-300" />
         )}
       </div>
     );

@@ -50,12 +50,14 @@ export function SideNav() {
   if (!user || pathname.startsWith("/auth/")) return null;
 
   return (
-    <aside className="hidden md:flex md:w-64 md:flex-col md:border-r md:bg-sidebar">
-      <div className="flex h-16 items-center gap-2 border-b px-6">
-        <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-padel-teal font-bold text-sm text-white">
-          P
+    <aside className="hidden md:sticky md:top-0 md:flex md:h-screen md:w-64 md:flex-col md:border-r md:bg-sidebar">
+      <div className="border-b">
+        <div className="flex h-14 items-center gap-2 px-6">
+          <div className="flex h-8 w-8 items-center justify-center rounded-lg bg-padel-teal font-bold text-sm text-white">
+            P
+          </div>
+          <span className="text-lg font-semibold text-padel-charcoal">Padel Organiser</span>
         </div>
-        <span className="text-lg font-semibold text-padel-charcoal">Padel Organiser</span>
       </div>
       <nav className="flex flex-1 flex-col gap-1 p-4">
         {navItems.map((item) => {

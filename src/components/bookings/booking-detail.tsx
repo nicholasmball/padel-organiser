@@ -24,7 +24,7 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft } from "lucide-react";
+import { ChevronLeft, Share2 } from "lucide-react";
 import { WeatherBadge } from "@/components/weather/weather-badge";
 
 interface Signup {
@@ -136,6 +136,20 @@ export function BookingDetail({
     router.refresh();
   }
 
+  async function handleShare() {
+    const url = `${window.location.origin}/bookings/${booking.id}`;
+    const shareData = {
+      title: `Padel at ${booking.venue_name}`,
+      text: `${formatDate(booking.date)} ${formatTime(booking.start_time)}-${formatTime(booking.end_time)}`,
+      url,
+    };
+    if (navigator.share) {
+      try { await navigator.share(shareData); } catch { /* cancelled */ }
+    } else {
+      await navigator.clipboard.writeText(url);
+    }
+  }
+
   function getInitials(name: string) {
     return name
       .split(" ")
@@ -164,15 +178,24 @@ export function BookingDetail({
           >
             <ChevronLeft className="h-5 w-5" />
           </button>
-          {isOrganiser && (
-            <Link
-              href={`/bookings/${booking.id}/edit`}
-              className="rounded-full px-4 py-1.5 text-[13px] font-medium text-white"
+          <div className="flex items-center gap-2">
+            <button
+              onClick={handleShare}
+              className="flex h-9 w-9 items-center justify-center rounded-full text-white"
               style={{ background: "rgba(255,255,255,0.15)" }}
             >
-              ✏️ Edit
-            </Link>
-          )}
+              <Share2 className="h-4 w-4" />
+            </button>
+            {isOrganiser && (
+              <Link
+                href={`/bookings/${booking.id}/edit`}
+                className="rounded-full px-4 py-1.5 text-[13px] font-medium text-white"
+                style={{ background: "rgba(255,255,255,0.15)" }}
+              >
+                ✏️ Edit
+              </Link>
+            )}
+          </div>
         </div>
 
         {/* Venue name + organiser */}

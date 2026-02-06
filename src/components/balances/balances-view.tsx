@@ -17,6 +17,13 @@ interface Debt {
   date: string;
 }
 
+const AVATAR_COLORS = [
+  "bg-padel-teal text-white",
+  "bg-padel-orange text-white",
+  "bg-padel-teal-dark text-white",
+  "bg-padel-red text-white",
+];
+
 interface Settlement {
   from_id: string;
   from_name: string;
@@ -75,10 +82,7 @@ export function BalancesView({
           {/* Per-member breakdown cards */}
           {settlements.length > 0 && (
             <div className="rounded-2xl border border-padel-gray-200 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-              <h3 className="mb-3 text-base font-semibold text-padel-charcoal">Settle Up</h3>
-              <p className="mb-3 text-xs text-padel-gray-400">
-                Net balances across all games:
-              </p>
+              <h3 className="mb-3 text-base font-semibold text-padel-charcoal">Balances</h3>
               <div className="space-y-3">
                 {settlements.map((s, i) => {
                   const isMyDebt = s.from_id === currentUserId;
@@ -96,9 +100,7 @@ export function BalancesView({
                     <div key={i} className="flex items-center gap-3">
                       {/* Avatar */}
                       <div className={`flex h-11 w-11 shrink-0 items-center justify-center rounded-full text-xs font-semibold ${
-                        isMyDebt
-                          ? "bg-[rgba(229,57,53,0.1)] text-[#E53935]"
-                          : "bg-[rgba(204,255,0,0.15)] text-padel-teal-dark"
+                        AVATAR_COLORS[i % AVATAR_COLORS.length]
                       }`}>
                         {initials}
                       </div>
@@ -113,7 +115,7 @@ export function BalancesView({
                           </span>
                         </div>
                         <p className="text-[12px] text-padel-gray-400">
-                          {s.from_name} → {s.to_name}
+                          {isMyDebt ? `You owe ${otherName}` : "Owes you"}
                         </p>
                         {/* Balance bar */}
                         <div className="mt-1.5 h-1 w-full rounded-full bg-padel-gray-200">

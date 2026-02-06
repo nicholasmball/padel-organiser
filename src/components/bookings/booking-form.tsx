@@ -297,7 +297,7 @@ export function BookingForm({ mode, bookingId, defaultValues }: BookingFormProps
         <button
           type="submit"
           disabled={loading}
-          className="w-full rounded-full bg-padel-teal py-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,128,128,0.25)] transition-all duration-200 hover:-translate-y-px hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
+          className="w-full rounded-xl bg-padel-teal py-3 text-sm font-semibold text-white shadow-[0_8px_24px_rgba(0,128,128,0.25)] transition-all duration-200 hover:-translate-y-px hover:brightness-110 active:scale-[0.98] disabled:opacity-50"
         >
           {loading
             ? mode === "edit"

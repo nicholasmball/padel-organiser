@@ -109,8 +109,10 @@ export function CalendarView({
 
   // Build unavailable set per user per date
   const unavailableSet = new Set<string>();
+  const unavailableDateSet = new Set<string>();
   unavailableDates.forEach((u) => {
     unavailableSet.add(`${u.user_id}:${u.date}`);
+    unavailableDateSet.add(u.date);
   });
 
   function getAvailableProfiles(dateStr: string): Profile[] {
@@ -241,6 +243,13 @@ export function CalendarView({
                         }`}
                       />
                     )}
+                    {unavailableDateSet.has(dateStr) && (
+                      <div
+                        className={`h-1 w-1 rounded-full ${
+                          isSelected ? "bg-white/40" : "bg-padel-gray-200"
+                        }`}
+                      />
+                    )}
                   </div>
                 </button>
               );
@@ -251,11 +260,15 @@ export function CalendarView({
           <div className="mt-3 flex items-center gap-4 text-xs text-padel-gray-400">
             <div className="flex items-center gap-1">
               <div className="h-2 w-2 rounded-full bg-padel-teal" />
-              Booking
+              Your booking
             </div>
             <div className="flex items-center gap-1">
               <div className="h-2 w-2 rounded-full bg-padel-lime" />
-              Members available
+              Open game
+            </div>
+            <div className="flex items-center gap-1">
+              <div className="h-2 w-2 rounded-full bg-padel-gray-200" />
+              Unavailable
             </div>
           </div>
         </div>
@@ -264,8 +277,15 @@ export function CalendarView({
       {/* Selected date details */}
       {selectedDate && (
         <div className="space-y-4">
-          <h3 className="text-lg font-semibold text-padel-charcoal">
-            Selected Day Activities
+          <h3 className="text-base font-semibold text-padel-gray-400">
+            Activities for{" "}
+            <span className="font-bold text-padel-charcoal">
+              {new Date(selectedDate + "T00:00:00").toLocaleDateString("en-GB", {
+                weekday: "short",
+                day: "numeric",
+                month: "short",
+              })}
+            </span>
           </h3>
 
           {/* Activity cards */}
