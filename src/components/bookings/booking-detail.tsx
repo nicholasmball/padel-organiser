@@ -24,7 +24,8 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Share2 } from "lucide-react";
+import { ChevronLeft, Share2, MessageCircle } from "lucide-react";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { WeatherBadge } from "@/components/weather/weather-badge";
 
 interface Signup {
@@ -36,6 +37,7 @@ interface Signup {
   profile?: {
     full_name: string;
     skill_level: string | null;
+    phone?: string | null;
   };
 }
 
@@ -304,6 +306,19 @@ export function BookingDetail({
                     {signup.payment_status === "paid" ? "Paid" : "Unpaid"}
                   </span>
                 </button>
+              )}
+              {/* WhatsApp button */}
+              {signup.profile?.phone && user && signup.user_id !== user.id && (
+                <a
+                  href={getWhatsAppUrl(signup.profile.phone)}
+                  target="_blank"
+                  rel="noopener noreferrer"
+                  className="mt-1.5 flex items-center gap-1 text-[11px] font-medium text-padel-teal transition-colors hover:text-padel-teal-dark"
+                  onClick={(e) => e.stopPropagation()}
+                >
+                  <MessageCircle className="h-3.5 w-3.5" />
+                  WhatsApp
+                </a>
               )}
             </div>
           ))}

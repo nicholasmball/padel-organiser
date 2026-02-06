@@ -4,6 +4,7 @@ import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
 import { Search, MessageCircle } from "lucide-react";
+import { getWhatsAppUrl } from "@/lib/whatsapp";
 
 const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
 
@@ -43,11 +44,6 @@ interface AvailabilitySlot {
 interface MembersListProps {
   profiles: Profile[];
   availability: AvailabilitySlot[];
-}
-
-function getWhatsAppUrl(phone: string): string {
-  const digits = phone.replace(/\D/g, "");
-  return `https://wa.me/${digits}`;
 }
 
 export function MembersList({ profiles, availability }: MembersListProps) {

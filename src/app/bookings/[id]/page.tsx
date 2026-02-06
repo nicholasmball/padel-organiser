@@ -53,7 +53,7 @@ export default async function BookingPage({ params }: PageProps) {
   const { data: signupProfiles } = signupUserIds.length
     ? await supabase
         .from("profiles")
-        .select("id, full_name, skill_level")
+        .select("id, full_name, skill_level, phone")
         .in("id", signupUserIds)
     : { data: [] };
 
@@ -73,6 +73,7 @@ export default async function BookingPage({ params }: PageProps) {
     profile: profileMap.get(s.user_id as string) as {
       full_name: string;
       skill_level: string | null;
+      phone: string | null;
     } | undefined,
   }));
 
