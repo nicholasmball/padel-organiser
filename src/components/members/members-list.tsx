@@ -3,7 +3,7 @@
 import { useState } from "react";
 import { Card, CardContent } from "@/components/ui/card";
 import { Input } from "@/components/ui/input";
-import { Search, MessageCircle } from "lucide-react";
+import { Search, MessageCircle, UserPlus } from "lucide-react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 
 const SHORT_DAYS = ["Sun", "Mon", "Tue", "Wed", "Thu", "Fri", "Sat"];
@@ -72,9 +72,39 @@ export function MembersList({ profiles, availability }: MembersListProps) {
     return true;
   });
 
+  async function handleInvite() {
+    const url = window.location.origin;
+    const shareData = {
+      title: "Join us on Padel Organiser!",
+      text: "Come play padel with us! Sign up and join the group.",
+      url,
+    };
+    if (navigator.share) {
+      try {
+        await navigator.share(shareData);
+      } catch {
+        /* user cancelled */
+      }
+    } else {
+      await navigator.clipboard.writeText(
+        `Come play padel with us! Sign up and join the group: ${url}`
+      );
+      alert("Invite link copied to clipboard!");
+    }
+  }
+
   return (
     <div className="max-w-2xl space-y-4">
-      <p className="text-[13px] text-padel-gray-400">{profiles.length} members</p>
+      <div className="flex items-center justify-between">
+        <p className="text-[13px] text-padel-gray-400">{profiles.length} members</p>
+        <button
+          onClick={handleInvite}
+          className="flex items-center gap-1.5 rounded-full border-[1.5px] border-padel-teal px-3 py-1.5 text-[13px] font-medium text-padel-teal transition-colors hover:bg-padel-teal hover:text-white"
+        >
+          <UserPlus className="h-3.5 w-3.5" />
+          Invite
+        </button>
+      </div>
 
       {/* Search */}
       <div className="relative">

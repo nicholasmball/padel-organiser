@@ -11,6 +11,47 @@ import type { Database } from "@/lib/types/database";
 type BookingInsert = Database["public"]["Tables"]["bookings"]["Insert"];
 type BookingUpdate = Database["public"]["Tables"]["bookings"]["Update"];
 
+export async function getSavedVenues() {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { venues: [] };
+
+  const admin = createAdminClient();
+  const { data } = await admin
+    .from("bookings")
+    .select("venue_name, venue_address, court_number, is_outdoor")
+    .neq("status", "cancelled")
+    .order("created_at", { ascending: false });
+
+  // Deduplicate by venue_name (keep first/most recent)
+  const seen = new Set<string>();
+  const venues: Array<{
+    venue_name: string;
+    venue_address: string | null;
+    court_number: string | null;
+    is_outdoor: boolean;
+  }> = [];
+
+  for (const row of (data as Array<Record<string, unknown>>) || []) {
+    const name = row.venue_name as string;
+    const key = name.toLowerCase().trim();
+    if (!seen.has(key)) {
+      seen.add(key);
+      venues.push({
+        venue_name: name,
+        venue_address: row.venue_address as string | null,
+        court_number: row.court_number as string | null,
+        is_outdoor: row.is_outdoor as boolean,
+      });
+    }
+  }
+
+  return { venues };
+}
+
 export async function createBooking(formData: {
   venue_name: string;
   venue_address?: string;
@@ -30,6 +71,19 @@ export async function createBooking(formData: {
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Not authenticated" };
+
+  // Validate date is not in the past
+  const today = new Date().toISOString().split("T")[0];
+  if (formData.date < today) {
+    return { error: "Cannot create a booking in the past" };
+  }
+  if (formData.date === today && formData.start_time) {
+    const now = new Date();
+    const [h, m] = formData.start_time.split(":").map(Number);
+    if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) {
+      return { error: "Start time must be in the future" };
+    }
+  }
 
   const profileResult = await ensureProfile(supabase);
   if (profileResult.error) return { error: profileResult.error };
@@ -69,8 +123,20 @@ export async function createBooking(formData: {
     status: "confirmed",
   });
 
+  const bookingId = (data as { id: string }).id;
+
+  // Notify users whose availability matches this booking
+  notifyAvailableUsers({
+    bookingId,
+    organiserId: user.id,
+    date: formData.date,
+    startTime: formData.start_time,
+    endTime: formData.end_time,
+    venueName: formData.venue_name,
+  });
+
   revalidatePath("/");
-  return { id: (data as { id: string }).id };
+  return { id: bookingId };
 }
 
 export async function updateBooking(
@@ -95,6 +161,12 @@ export async function updateBooking(
   } = await supabase.auth.getUser();
 
   if (!user) return { error: "Not authenticated" };
+
+  // Validate date is not in the past
+  const today = new Date().toISOString().split("T")[0];
+  if (formData.date < today) {
+    return { error: "Cannot set booking date to the past" };
+  }
 
   // Geocode address to get coordinates for weather
   let venue_lat: number | null = null;
@@ -280,6 +352,125 @@ export async function markInterested(bookingId: string) {
   return { success: true };
 }
 
+export async function getAvailableMembers(bookingId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  // Get all user IDs already signed up for this booking
+  const { data: signups } = await supabase
+    .from("signups")
+    .select("user_id")
+    .eq("booking_id", bookingId);
+
+  const signedUpIds = new Set(
+    ((signups as Array<Record<string, unknown>>) || []).map(
+      (s) => s.user_id as string
+    )
+  );
+
+  // Get all profiles
+  const admin = createAdminClient();
+  const { data: profiles } = await admin
+    .from("profiles")
+    .select("id, full_name, skill_level")
+    .order("full_name", { ascending: true });
+
+  const available = ((profiles as Array<Record<string, unknown>>) || [])
+    .filter((p) => !signedUpIds.has(p.id as string))
+    .map((p) => ({
+      id: p.id as string,
+      full_name: p.full_name as string,
+      skill_level: p.skill_level as string | null,
+    }));
+
+  return { members: available };
+}
+
+export async function addPlayerToBooking(bookingId: string, userId: string) {
+  const supabase = await createClient();
+  const {
+    data: { user },
+  } = await supabase.auth.getUser();
+
+  if (!user) return { error: "Not authenticated" };
+
+  // Verify the current user is the organiser
+  const { data: booking } = await supabase
+    .from("bookings")
+    .select("organiser_id, max_players, status, venue_name")
+    .eq("id", bookingId)
+    .single();
+
+  if (!booking) return { error: "Booking not found" };
+
+  const b = booking as unknown as {
+    organiser_id: string;
+    max_players: number;
+    status: string;
+    venue_name: string;
+  };
+
+  if (b.organiser_id !== user.id) return { error: "Only the organiser can add players" };
+  if (b.status === "cancelled") return { error: "Booking is cancelled" };
+
+  // Count confirmed signups
+  const admin = createAdminClient();
+  const { count } = await admin
+    .from("signups")
+    .select("*", { count: "exact", head: true })
+    .eq("booking_id", bookingId)
+    .eq("status", "confirmed");
+
+  const confirmedCount = count ?? 0;
+  const isWaitlist = confirmedCount >= b.max_players;
+
+  // Insert signup using admin client (bypasses RLS for cross-user insert)
+  const { error } = await admin.from("signups").insert({
+    booking_id: bookingId,
+    user_id: userId,
+    status: isWaitlist ? "waitlist" : "confirmed",
+    position: isWaitlist ? confirmedCount + 1 : null,
+  });
+
+  if (error) {
+    if (error.code === "23505") return { error: "Player is already signed up" };
+    return { error: error.message };
+  }
+
+  // Notify the added player
+  const { data: organiserProfile } = await supabase
+    .from("profiles")
+    .select("full_name")
+    .eq("id", user.id)
+    .single();
+  const organiserName =
+    (organiserProfile as unknown as { full_name: string })?.full_name || "The organiser";
+
+  createNotification({
+    userIds: [userId],
+    bookingId,
+    type: "signup",
+    title: "Added to game",
+    message: `${organiserName} added you to ${b.venue_name}`,
+  });
+
+  // Update booking status if now full
+  if (!isWaitlist && confirmedCount + 1 >= b.max_players) {
+    await admin
+      .from("bookings")
+      .update({ status: "full" } as BookingUpdate)
+      .eq("id", bookingId);
+  }
+
+  revalidatePath("/");
+  revalidatePath(`/bookings/${bookingId}`);
+  return { success: true, status: isWaitlist ? "waitlist" : "confirmed" };
+}
+
 export async function leaveBooking(bookingId: string) {
   const supabase = await createClient();
   const {
@@ -371,4 +562,77 @@ export async function leaveBooking(bookingId: string) {
   revalidatePath("/");
   revalidatePath(`/bookings/${bookingId}`);
   return { success: true };
+}
+
+/**
+ * Notify users whose weekly availability overlaps with a newly created booking.
+ * Runs async (fire-and-forget) so it doesn't block the booking creation response.
+ */
+async function notifyAvailableUsers(params: {
+  bookingId: string;
+  organiserId: string;
+  date: string;
+  startTime: string;
+  endTime: string;
+  venueName: string;
+}) {
+  try {
+    const admin = createAdminClient();
+    const bookingDate = new Date(params.date + "T00:00:00");
+    const dayOfWeek = bookingDate.getDay(); // 0=Sun, 6=Sat
+
+    // Format date for notification message
+    const dateDisplay = bookingDate.toLocaleDateString("en-GB", {
+      weekday: "short",
+      day: "numeric",
+      month: "short",
+    });
+    const timeDisplay = `${params.startTime.slice(0, 5)} – ${params.endTime.slice(0, 5)}`;
+
+    // Find users with availability on this day that overlaps the booking time
+    const { data: availSlots } = await admin
+      .from("availability")
+      .select("user_id, start_time, end_time")
+      .eq("day_of_week", dayOfWeek);
+
+    if (!availSlots || availSlots.length === 0) return;
+
+    // Filter to overlapping time slots
+    const availList = (availSlots as Array<Record<string, unknown>>).filter((slot) => {
+      const slotStart = slot.start_time as string;
+      const slotEnd = slot.end_time as string;
+      // Overlap: slot starts before booking ends AND slot ends after booking starts
+      return slotStart < params.endTime && slotEnd > params.startTime;
+    });
+
+    const candidateUserIds = [...new Set(availList.map((s) => s.user_id as string))];
+
+    // Exclude the organiser
+    const filtered = candidateUserIds.filter((id) => id !== params.organiserId);
+    if (filtered.length === 0) return;
+
+    // Exclude users who are unavailable on this specific date
+    const { data: unavail } = await admin
+      .from("unavailable_dates")
+      .select("user_id")
+      .eq("date", params.date)
+      .in("user_id", filtered);
+
+    const unavailableIds = new Set(
+      ((unavail as Array<Record<string, unknown>>) || []).map((u) => u.user_id as string)
+    );
+
+    const usersToNotify = filtered.filter((id) => !unavailableIds.has(id));
+    if (usersToNotify.length === 0) return;
+
+    await createNotification({
+      userIds: usersToNotify,
+      bookingId: params.bookingId,
+      type: "availability_match",
+      title: "New game when you're free!",
+      message: `${params.venueName} on ${dateDisplay} at ${timeDisplay} — you're available!`,
+    });
+  } catch {
+    // Silently fail — don't break booking creation if notification fails
+  }
 }

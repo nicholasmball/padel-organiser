@@ -37,6 +37,7 @@ export async function GET(request: Request) {
             id: user.id,
             full_name: (user.user_metadata.full_name as string) || "New Player",
             email: user.email ?? "",
+            phone: (user.user_metadata.phone as string) || null,
           });
         }
       }

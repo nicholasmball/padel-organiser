@@ -1,13 +1,20 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
 import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Textarea } from "@/components/ui/textarea";
 import { Calendar, Clock } from "lucide-react";
-import { createBooking, updateBooking } from "@/lib/actions/bookings";
+import { createBooking, updateBooking, getSavedVenues } from "@/lib/actions/bookings";
+
+interface SavedVenue {
+  venue_name: string;
+  venue_address: string | null;
+  court_number: string | null;
+  is_outdoor: boolean;
+}
 
 interface BookingFormProps {
   mode: "create" | "edit";
@@ -61,7 +68,32 @@ export function BookingForm({ mode, bookingId, defaultValues }: BookingFormProps
   const [startTime, setStartTime] = useState(
     defaultValues?.start_time ?? ""
   );
-  const [endTime, setEndTime] = useState(defaultValues?.end_time ?? "");
+
+  // Calculate initial duration from default start/end times
+  function calcDuration(start: string, end: string): number {
+    if (!start || !end) return 90;
+    const [sh, sm] = start.split(":").map(Number);
+    const [eh, em] = end.split(":").map(Number);
+    return (eh * 60 + em) - (sh * 60 + sm);
+  }
+
+  const [duration, setDuration] = useState<number>(
+    defaultValues?.start_time && defaultValues?.end_time
+      ? calcDuration(defaultValues.start_time, defaultValues.end_time)
+      : 90
+  );
+
+  // Calculate end time from start time + duration
+  function calcEndTime(start: string, dur: number): string {
+    if (!start) return "";
+    const [h, m] = start.split(":").map(Number);
+    const totalMin = h * 60 + m + dur;
+    const endH = Math.floor(totalMin / 60) % 24;
+    const endM = totalMin % 60;
+    return `${endH.toString().padStart(2, "0")}:${endM.toString().padStart(2, "0")}`;
+  }
+
+  const endTime = calcEndTime(startTime, duration);
   const [totalCost, setTotalCost] = useState(
     defaultValues?.total_cost?.toString() ?? ""
   );
@@ -70,9 +102,60 @@ export function BookingForm({ mode, bookingId, defaultValues }: BookingFormProps
   );
   const [notes, setNotes] = useState(defaultValues?.notes ?? "");
 
+  const [savedVenues, setSavedVenues] = useState<SavedVenue[]>([]);
+  const [showVenueDropdown, setShowVenueDropdown] = useState(false);
+  const venueRef = useRef<HTMLDivElement>(null);
+
+  useEffect(() => {
+    getSavedVenues().then((result) => {
+      if (result.venues) setSavedVenues(result.venues);
+    });
+  }, []);
+
+  // Close dropdown when clicking outside
+  useEffect(() => {
+    function handleClickOutside(e: MouseEvent) {
+      if (venueRef.current && !venueRef.current.contains(e.target as Node)) {
+        setShowVenueDropdown(false);
+      }
+    }
+    document.addEventListener("mousedown", handleClickOutside);
+    return () => document.removeEventListener("mousedown", handleClickOutside);
+  }, []);
+
+  const filteredVenues = savedVenues.filter((v) =>
+    v.venue_name.toLowerCase().includes(venueName.toLowerCase())
+  );
+
+  function selectVenue(venue: SavedVenue) {
+    setVenueName(venue.venue_name);
+    setVenueAddress(venue.venue_address ?? "");
+    setCourtNumber(venue.court_number ?? "");
+    setIsOutdoor(venue.is_outdoor);
+    setShowVenueDropdown(false);
+  }
+
   async function handleSubmit(e: React.FormEvent) {
     e.preventDefault();
     setError(null);
+
+    // Validate date is not in the past
+    const today = new Date().toISOString().split("T")[0];
+    if (date < today) {
+      setError("Cannot create a booking in the past");
+      return;
+    }
+
+    // If today, validate start time is in the future
+    if (date === today && startTime) {
+      const now = new Date();
+      const [h, m] = startTime.split(":").map(Number);
+      if (h < now.getHours() || (h === now.getHours() && m <= now.getMinutes())) {
+        setError("Start time must be in the future for today's date");
+        return;
+      }
+    }
+
     setLoading(true);
 
     const formData = {
@@ -125,18 +208,46 @@ export function BookingForm({ mode, bookingId, defaultValues }: BookingFormProps
       </div>
 
       <form onSubmit={handleSubmit} className="space-y-5 rounded-[20px] bg-white p-6 shadow-[0_10px_20px_rgba(0,128,128,0.05)]">
-        {/* Venue Name */}
-        <div className="space-y-1.5">
+        {/* Venue Name — combobox with saved venues */}
+        <div className="space-y-1.5" ref={venueRef}>
           <Label htmlFor="venueName" className="text-sm font-medium text-padel-charcoal">
             Venue Name <span className="text-padel-teal">*</span>
           </Label>
-          <Input
-            id="venueName"
-            placeholder="e.g. Padel Club London"
-            value={venueName}
-            onChange={(e) => setVenueName(e.target.value)}
-            required
-          />
+          <div className="relative">
+            <Input
+              id="venueName"
+              placeholder="e.g. Padel Club London"
+              value={venueName}
+              onChange={(e) => {
+                setVenueName(e.target.value);
+                setShowVenueDropdown(true);
+              }}
+              onFocus={() => setShowVenueDropdown(true)}
+              autoComplete="off"
+              required
+            />
+            {showVenueDropdown && filteredVenues.length > 0 && (
+              <div className="absolute z-10 mt-1 max-h-48 w-full overflow-y-auto rounded-lg border border-padel-gray-200 bg-white shadow-lg">
+                {filteredVenues.map((venue, i) => (
+                  <button
+                    key={i}
+                    type="button"
+                    onClick={() => selectVenue(venue)}
+                    className="flex w-full flex-col px-3 py-2.5 text-left hover:bg-padel-soft-gray"
+                  >
+                    <span className="text-sm font-medium text-padel-charcoal">
+                      {venue.venue_name}
+                    </span>
+                    {venue.venue_address && (
+                      <span className="text-xs text-padel-gray-400">
+                        {venue.venue_address}
+                      </span>
+                    )}
+                  </button>
+                ))}
+              </div>
+            )}
+          </div>
         </div>
 
         {/* Venue Address */}
@@ -191,6 +302,7 @@ export function BookingForm({ mode, bookingId, defaultValues }: BookingFormProps
             type="date"
             value={date}
             onChange={(e) => setDate(e.target.value)}
+            min={new Date().toISOString().split("T")[0]}
             required
           />
           {date && (
@@ -201,22 +313,38 @@ export function BookingForm({ mode, bookingId, defaultValues }: BookingFormProps
           )}
         </div>
 
-        {/* Time — with formatted display */}
+        {/* Start Time + Duration */}
         <div className="space-y-1.5">
           <Label className="text-sm font-medium text-padel-charcoal">Time <span className="text-padel-teal">*</span></Label>
           <div className="grid grid-cols-2 gap-3">
-            <Input
-              type="time"
-              value={startTime}
-              onChange={(e) => setStartTime(e.target.value)}
-              required
-            />
-            <Input
-              type="time"
-              value={endTime}
-              onChange={(e) => setEndTime(e.target.value)}
-              required
-            />
+            <div className="space-y-1">
+              <span className="text-xs text-padel-gray-400">Start</span>
+              <Input
+                type="time"
+                value={startTime}
+                onChange={(e) => setStartTime(e.target.value)}
+                required
+              />
+            </div>
+            <div className="space-y-1">
+              <span className="text-xs text-padel-gray-400">Duration</span>
+              <div className="flex rounded-lg bg-padel-soft-gray p-1">
+                {[60, 90, 120].map((d) => (
+                  <button
+                    key={d}
+                    type="button"
+                    onClick={() => setDuration(d)}
+                    className={`flex-1 rounded-md py-2 text-sm font-medium transition-all duration-200 ${
+                      duration === d
+                        ? "bg-white text-padel-teal shadow-sm"
+                        : "text-padel-gray-400 hover:text-padel-charcoal"
+                    }`}
+                  >
+                    {d}m
+                  </button>
+                ))}
+              </div>
+            </div>
           </div>
           {startTime && endTime && (
             <div className="flex items-center gap-2 rounded-lg bg-padel-soft-gray px-3 py-2 text-sm text-padel-charcoal">

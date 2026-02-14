@@ -31,6 +31,9 @@ import {
   signUpForBooking,
   markInterested,
   leaveBooking,
+  getAvailableMembers,
+  addPlayerToBooking,
+  getSavedVenues,
 } from "@/lib/actions/bookings";
 
 function chainMock(result: Record<string, unknown>) {
@@ -41,6 +44,7 @@ function chainMock(result: Record<string, unknown>) {
   chain.update = vi.fn().mockReturnValue(chain);
   chain.delete = vi.fn().mockReturnValue(chain);
   chain.eq = vi.fn().mockReturnValue(chain);
+  chain.in = vi.fn().mockReturnValue(chain);
   chain.neq = vi.fn().mockReturnValue(chain);
   chain.order = vi.fn().mockReturnValue(chain);
   chain.limit = vi.fn().mockReturnValue(chain);
@@ -71,6 +75,14 @@ describe("createBooking", () => {
     mockServerClient.auth.getUser.mockResolvedValue({ data: { user: null } });
     const result = await createBooking(sampleBookingForm);
     expect(result).toEqual({ error: "Not authenticated" });
+  });
+
+  it("returns error for past date", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+    });
+    const result = await createBooking({ ...sampleBookingForm, date: "2020-01-01" });
+    expect(result).toEqual({ error: "Cannot create a booking in the past" });
   });
 
   it("creates booking with geocoded coordinates and auto-signs up organiser", async () => {
@@ -107,6 +119,52 @@ describe("createBooking", () => {
     });
   });
 
+  it("notifies users whose availability matches the booking", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "organiser-1" } },
+    });
+
+    const insertChain = chainMock({ data: { id: "booking-1" }, error: null });
+    const signupChain = chainMock({ data: null, error: null });
+    let serverCallCount = 0;
+    mockServerClient.from.mockImplementation(() => {
+      serverCallCount++;
+      if (serverCallCount === 1) return insertChain;
+      return signupChain;
+    });
+
+    // Admin client calls from notifyAvailableUsers
+    const availChain = chainMock({
+      data: [
+        { user_id: "player-1", start_time: "17:00", end_time: "20:00" },
+        { user_id: "player-2", start_time: "10:00", end_time: "12:00" }, // no overlap
+        { user_id: "organiser-1", start_time: "17:00", end_time: "20:00" }, // excluded (organiser)
+      ],
+      error: null,
+    });
+    const unavailChain = chainMock({ data: [], error: null });
+    let adminCallCount = 0;
+    mockAdminClient.from.mockImplementation(() => {
+      adminCallCount++;
+      if (adminCallCount === 1) return availChain; // availability query
+      return unavailChain; // unavailable_dates query
+    });
+
+    await createBooking(sampleBookingForm);
+
+    // Wait for async notification to complete
+    await new Promise((r) => setTimeout(r, 50));
+
+    const { createNotification } = await import("@/lib/actions/notifications");
+    expect(createNotification).toHaveBeenCalledWith(
+      expect.objectContaining({
+        userIds: ["player-1"],
+        type: "availability_match",
+        title: "New game when you're free!",
+      })
+    );
+  });
+
   it("returns error on insert failure", async () => {
     mockServerClient.auth.getUser.mockResolvedValue({
       data: { user: { id: "organiser-1" } },
@@ -128,6 +186,14 @@ describe("updateBooking", () => {
     mockServerClient.auth.getUser.mockResolvedValue({ data: { user: null } });
     const result = await updateBooking("booking-1", sampleBookingForm);
     expect(result).toEqual({ error: "Not authenticated" });
+  });
+
+  it("returns error for past date", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "organiser-1" } },
+    });
+    const result = await updateBooking("booking-1", { ...sampleBookingForm, date: "2020-01-01" });
+    expect(result).toEqual({ error: "Cannot set booking date to the past" });
   });
 
   it("updates booking with new geocoded address", async () => {
@@ -182,6 +248,15 @@ describe("deleteBooking", () => {
 
     const result = await deleteBooking("booking-1");
     expect(result).toEqual({ success: true });
+
+    const { createNotification } = await import("@/lib/actions/notifications");
+    expect(createNotification).toHaveBeenCalledWith({
+      userIds: ["player-1", "player-2"],
+      bookingId: "booking-1",
+      type: "cancelled",
+      title: "Booking cancelled",
+      message: "Padel Club has been cancelled by the organiser",
+    });
   });
 });
 
@@ -228,6 +303,54 @@ describe("signUpForBooking", () => {
 
     const result = await signUpForBooking("booking-1");
     expect(result).toEqual({ error: "Booking is cancelled" });
+  });
+
+  it("notifies organiser when a player signs up", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "player-1" } },
+    });
+
+    let callCount = 0;
+    mockServerClient.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // booking details
+        return chainMock({
+          data: {
+            max_players: 4,
+            status: "open",
+            organiser_id: "organiser-1",
+            venue_name: "Padel Club",
+          },
+          error: null,
+        });
+      }
+      if (callCount === 2) {
+        // count confirmed
+        return chainMock({ count: 1, data: null, error: null });
+      }
+      if (callCount === 3) {
+        // insert signup
+        return chainMock({ data: null, error: null });
+      }
+      if (callCount === 4) {
+        // profile name lookup
+        return chainMock({ data: { full_name: "John" }, error: null });
+      }
+      return chainMock({ data: null, error: null });
+    });
+
+    const result = await signUpForBooking("booking-1");
+    expect(result).toEqual({ status: "confirmed" });
+
+    const { createNotification } = await import("@/lib/actions/notifications");
+    expect(createNotification).toHaveBeenCalledWith({
+      userIds: ["organiser-1"],
+      bookingId: "booking-1",
+      type: "signup",
+      title: "John signed up",
+      message: "John signed up for Padel Club",
+    });
   });
 
   it("returns 'Already signed up' for duplicate signup", async () => {
@@ -367,5 +490,170 @@ describe("leaveBooking", () => {
     const result = await leaveBooking("booking-1");
     expect(result).toEqual({ success: true });
     expect(mockAdminClient.from).toHaveBeenCalled();
+  });
+});
+
+describe("getAvailableMembers", () => {
+  it("returns error when not authenticated", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({ data: { user: null } });
+    const result = await getAvailableMembers("booking-1");
+    expect(result).toEqual({ error: "Not authenticated" });
+  });
+
+  it("returns members not already signed up", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+    });
+
+    // Signups query
+    const signupsChain = chainMock({
+      data: [{ user_id: "user-1" }, { user_id: "user-2" }],
+      error: null,
+    });
+    mockServerClient.from.mockReturnValue(signupsChain);
+
+    // All profiles via admin client
+    const profilesChain = chainMock({
+      data: [
+        { id: "user-1", full_name: "Alice", skill_level: "beginner" },
+        { id: "user-2", full_name: "Bob", skill_level: "intermediate" },
+        { id: "user-3", full_name: "Charlie", skill_level: "advanced" },
+      ],
+      error: null,
+    });
+    mockAdminClient.from.mockReturnValue(profilesChain);
+
+    const result = await getAvailableMembers("booking-1");
+    expect(result.members).toHaveLength(1);
+    expect(result.members![0].id).toBe("user-3");
+    expect(result.members![0].full_name).toBe("Charlie");
+  });
+});
+
+describe("addPlayerToBooking", () => {
+  it("returns error when not authenticated", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({ data: { user: null } });
+    const result = await addPlayerToBooking("booking-1", "player-1");
+    expect(result).toEqual({ error: "Not authenticated" });
+  });
+
+  it("returns error when user is not the organiser", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+    });
+
+    const chain = chainMock({
+      data: { organiser_id: "organiser-1", max_players: 4, status: "open", venue_name: "Club" },
+      error: null,
+    });
+    mockServerClient.from.mockReturnValue(chain);
+
+    const result = await addPlayerToBooking("booking-1", "player-1");
+    expect(result).toEqual({ error: "Only the organiser can add players" });
+  });
+
+  it("returns error for cancelled booking", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "organiser-1" } },
+    });
+
+    const chain = chainMock({
+      data: { organiser_id: "organiser-1", max_players: 4, status: "cancelled", venue_name: "Club" },
+      error: null,
+    });
+    mockServerClient.from.mockReturnValue(chain);
+
+    const result = await addPlayerToBooking("booking-1", "player-1");
+    expect(result).toEqual({ error: "Booking is cancelled" });
+  });
+
+  it("adds player as confirmed when spots available", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "organiser-1" } },
+    });
+
+    const bookingChain = chainMock({
+      data: { organiser_id: "organiser-1", max_players: 4, status: "open", venue_name: "Club" },
+      error: null,
+    });
+
+    let serverCallCount = 0;
+    mockServerClient.from.mockImplementation(() => {
+      serverCallCount++;
+      if (serverCallCount === 1) return bookingChain; // booking lookup
+      // organiser profile lookup
+      return chainMock({ data: { full_name: "Organiser" }, error: null });
+    });
+
+    const countChain = chainMock({ count: 2, data: null, error: null });
+    const insertChain = chainMock({ data: null, error: null });
+    let adminCallCount = 0;
+    mockAdminClient.from.mockImplementation(() => {
+      adminCallCount++;
+      if (adminCallCount === 1) return countChain; // count confirmed
+      return insertChain; // insert signup
+    });
+
+    const result = await addPlayerToBooking("booking-1", "player-1");
+    expect(result).toEqual({ success: true, status: "confirmed" });
+  });
+
+  it("returns error for duplicate player", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "organiser-1" } },
+    });
+
+    const bookingChain = chainMock({
+      data: { organiser_id: "organiser-1", max_players: 4, status: "open", venue_name: "Club" },
+      error: null,
+    });
+    mockServerClient.from.mockReturnValue(bookingChain);
+
+    const countChain = chainMock({ count: 2, data: null, error: null });
+    const insertChain = chainMock({ data: null, error: null });
+    // Override insert to return duplicate error
+    insertChain.insert = vi.fn().mockResolvedValue({
+      data: null,
+      error: { code: "23505", message: "duplicate" },
+    });
+
+    let adminCallCount = 0;
+    mockAdminClient.from.mockImplementation(() => {
+      adminCallCount++;
+      if (adminCallCount === 1) return countChain;
+      return insertChain;
+    });
+
+    const result = await addPlayerToBooking("booking-1", "player-1");
+    expect(result).toEqual({ error: "Player is already signed up" });
+  });
+});
+
+describe("getSavedVenues", () => {
+  it("returns empty array when not authenticated", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({ data: { user: null } });
+    const result = await getSavedVenues();
+    expect(result).toEqual({ venues: [] });
+  });
+
+  it("returns deduplicated venues from bookings", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "user-1" } },
+    });
+
+    const chain = chainMock({
+      data: [
+        { venue_name: "Club A", venue_address: "123 St", court_number: "1", is_outdoor: true },
+        { venue_name: "Club A", venue_address: "123 St", court_number: "2", is_outdoor: true },
+        { venue_name: "Club B", venue_address: "456 Rd", court_number: null, is_outdoor: false },
+      ],
+      error: null,
+    });
+    mockAdminClient.from.mockReturnValue(chain);
+
+    const result = await getSavedVenues();
+    expect(result.venues).toHaveLength(2);
+    expect(result.venues[0].venue_name).toBe("Club A");
+    expect(result.venues[1].venue_name).toBe("Club B");
   });
 });

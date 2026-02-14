@@ -75,6 +75,45 @@ describe("addComment", () => {
     });
   });
 
+  it("notifies other signed-up players about the comment", async () => {
+    mockServerClient.auth.getUser.mockResolvedValue({
+      data: { user: { id: "commenter-1" } },
+    });
+
+    let callCount = 0;
+    mockServerClient.from.mockImplementation(() => {
+      callCount++;
+      if (callCount === 1) {
+        // insert comment
+        return chainMock({ data: null, error: null });
+      }
+      if (callCount === 2) {
+        // signups query
+        return chainMock({
+          data: [{ user_id: "player-1" }, { user_id: "player-2" }],
+          error: null,
+        });
+      }
+      if (callCount === 3) {
+        // profile query (commenter name)
+        return chainMock({ data: { full_name: "Alice" }, error: null });
+      }
+      // bookings query (venue name)
+      return chainMock({ data: { venue_name: "Padel Club" }, error: null });
+    });
+
+    await addComment("booking-1", "See you there!");
+
+    const { createNotification } = await import("@/lib/actions/notifications");
+    expect(createNotification).toHaveBeenCalledWith({
+      userIds: ["player-1", "player-2"],
+      bookingId: "booking-1",
+      type: "comment",
+      title: "Alice commented",
+      message: 'New comment on Padel Club: "See you there!"',
+    });
+  });
+
   it("trims whitespace from comment content", async () => {
     mockServerClient.auth.getUser.mockResolvedValue({
       data: { user: { id: "user-1" } },

@@ -1,9 +1,11 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
+import dynamic from "next/dynamic";
 import { useAuth } from "@/hooks/use-auth";
+import { createClient } from "@/lib/supabase/client";
 import {
   signUpForBooking,
   leaveBooking,
@@ -24,9 +26,15 @@ import {
   AlertDialogTitle,
   AlertDialogTrigger,
 } from "@/components/ui/alert-dialog";
-import { ChevronLeft, Share2, MessageCircle } from "lucide-react";
+import { ChevronLeft, Share2, MessageCircle, MapPin, ExternalLink } from "lucide-react";
 import { getWhatsAppUrl } from "@/lib/whatsapp";
 import { WeatherBadge } from "@/components/weather/weather-badge";
+import { AddPlayerDialog } from "@/components/bookings/add-player-dialog";
+
+const VenueMap = dynamic(
+  () => import("@/components/bookings/venue-map").then((mod) => mod.VenueMap),
+  { ssr: false, loading: () => <div className="h-[200px] animate-pulse rounded-2xl bg-padel-gray-200/50" /> }
+);
 
 interface Signup {
   id: string;
@@ -87,6 +95,36 @@ export function BookingDetail({
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
+  const selfAction = useRef(false);
+
+  // Subscribe to realtime signup changes for this booking
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`signups:${booking.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "signups",
+          filter: `booking_id=eq.${booking.id}`,
+        },
+        () => {
+          if (selfAction.current) {
+            selfAction.current = false;
+            return;
+          }
+          router.refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [booking.id, router]);
+
   const isOrganiser = user?.id === booking.organiser_id;
   const mySignup = signups.find((s) => s.user_id === user?.id);
   const isSignedUp = !!mySignup;
@@ -106,6 +144,7 @@ export function BookingDetail({
   async function handleSignUp() {
     setLoading(true);
     setError(null);
+    selfAction.current = true;
     const result = await signUpForBooking(booking.id);
     if (result.error) setError(result.error);
     setLoading(false);
@@ -115,6 +154,7 @@ export function BookingDetail({
   async function handleInterested() {
     setLoading(true);
     setError(null);
+    selfAction.current = true;
     const result = await markInterested(booking.id);
     if (result.error) setError(result.error);
     setLoading(false);
@@ -124,6 +164,7 @@ export function BookingDetail({
   async function handleLeave() {
     setLoading(true);
     setError(null);
+    selfAction.current = true;
     const result = await leaveBooking(booking.id);
     if (result.error) setError(result.error);
     setLoading(false);
@@ -235,7 +276,7 @@ export function BookingDetail({
               className="rounded-[10px] px-3 py-1.5 text-[13px] font-medium text-white"
               style={{ background: "rgba(255,255,255,0.12)" }}
             >
-              💷 £{costPerPlayer.toFixed(2)}/player
+              💷 £{booking.total_cost.toFixed(2)} total · £{costPerPlayer.toFixed(2)}/player
             </span>
           )}
         </div>
@@ -254,6 +295,58 @@ export function BookingDetail({
         )}
       </div>
 
+      {/* Waitlist banner */}
+      {mySignup && mySignup.status === "waitlist" && (
+        <div className="rounded-2xl border border-amber-200 bg-amber-50 px-4 py-3">
+          <p className="text-sm font-medium text-amber-800">
+            You&apos;re on the waitlist — we&apos;ll notify you if a spot opens up
+          </p>
+        </div>
+      )}
+
+      {/* Detailed weather section */}
+      {booking.is_outdoor && booking.venue_lat && booking.venue_lng && (
+        <WeatherBadge
+          lat={booking.venue_lat}
+          lng={booking.venue_lng}
+          date={booking.date}
+          isOutdoor={booking.is_outdoor}
+          startTime={booking.start_time}
+          endTime={booking.end_time}
+        />
+      )}
+
+      {/* Venue map */}
+      {booking.venue_lat && booking.venue_lng && (
+        <div className="overflow-hidden rounded-2xl border border-padel-gray-200 bg-white shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
+          <div className="h-[200px]">
+            <VenueMap
+              lat={booking.venue_lat}
+              lng={booking.venue_lng}
+              venueName={booking.venue_name}
+              venueAddress={booking.venue_address}
+            />
+          </div>
+          <div className="flex items-center justify-between px-4 py-3">
+            <div className="flex items-center gap-2 text-sm text-padel-charcoal">
+              <MapPin className="h-4 w-4 text-padel-teal" />
+              <span className="font-medium">
+                {booking.venue_address || booking.venue_name}
+              </span>
+            </div>
+            <a
+              href={`https://www.google.com/maps/search/?api=1&query=${booking.venue_lat},${booking.venue_lng}`}
+              target="_blank"
+              rel="noopener noreferrer"
+              className="flex items-center gap-1 text-xs font-medium text-padel-teal hover:text-padel-teal-dark"
+            >
+              Directions
+              <ExternalLink className="h-3 w-3" />
+            </a>
+          </div>
+        </div>
+      )}
+
       {/* Notes */}
       {booking.notes && (
         <div className="rounded-2xl border border-padel-gray-200 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
@@ -263,9 +356,14 @@ export function BookingDetail({
 
       {/* Players section — 2×2 grid */}
       <div className="rounded-2xl border border-padel-gray-200 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)]">
-        <h3 className="mb-3 text-base font-semibold text-padel-charcoal">
-          Players ({confirmedSignups.length}/{booking.max_players})
-        </h3>
+        <div className="mb-3 flex items-center justify-between">
+          <h3 className="text-base font-semibold text-padel-charcoal">
+            Players ({confirmedSignups.length}/{booking.max_players})
+          </h3>
+          {isOrganiser && !isCancelled && (
+            <AddPlayerDialog bookingId={booking.id} />
+          )}
+        </div>
         <div className="grid grid-cols-2 gap-3">
           {/* Filled slots */}
           {confirmedSignups.map((signup) => (

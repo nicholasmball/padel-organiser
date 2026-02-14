@@ -17,6 +17,8 @@ import {
   XCircle,
   DollarSign,
   ArrowUpFromLine,
+  Clock,
+  CalendarCheck,
 } from "lucide-react";
 
 interface Notification {
@@ -36,6 +38,9 @@ const typeIcons: Record<string, typeof Bell> = {
   comment: MessageSquare,
   payment: DollarSign,
   waitlist_promoted: ArrowUpFromLine,
+  reminder_24h: Clock,
+  reminder_3h: Clock,
+  availability_match: CalendarCheck,
 };
 
 function timeAgo(dateStr: string) {
@@ -54,6 +59,30 @@ function timeAgo(dateStr: string) {
     day: "numeric",
     month: "short",
   });
+}
+
+function getDateGroup(dateStr: string): string {
+  const now = new Date();
+  const date = new Date(dateStr);
+
+  const todayStart = new Date(now.getFullYear(), now.getMonth(), now.getDate());
+  const yesterdayStart = new Date(todayStart);
+  yesterdayStart.setDate(yesterdayStart.getDate() - 1);
+
+  if (date >= todayStart) return "Today";
+  if (date >= yesterdayStart) return "Yesterday";
+  return "Earlier";
+}
+
+function groupNotifications(notifications: Notification[]): Map<string, Notification[]> {
+  const groups = new Map<string, Notification[]>();
+  for (const n of notifications) {
+    const group = getDateGroup(n.created_at);
+    const existing = groups.get(group) || [];
+    existing.push(n);
+    groups.set(group, existing);
+  }
+  return groups;
 }
 
 export default function NotificationsPage() {
@@ -116,11 +145,17 @@ export default function NotificationsPage() {
   }
 
   const unreadCount = notifications.filter((n) => !n.is_read).length;
+  const grouped = groupNotifications(notifications);
 
   return (
     <div className="max-w-2xl space-y-4">
       <div className="flex items-center justify-between">
-        <h2 className="text-lg font-semibold text-padel-charcoal">Notifications</h2>
+        <div>
+          <h2 className="text-lg font-semibold text-padel-charcoal">Notifications</h2>
+          {unreadCount > 0 && (
+            <p className="text-xs text-padel-gray-400">{unreadCount} unread</p>
+          )}
+        </div>
         {unreadCount > 0 && (
           <Button
             variant="outline"
@@ -144,70 +179,86 @@ export default function NotificationsPage() {
           </CardContent>
         </Card>
       ) : (
-        <div className="space-y-2">
-          {notifications.map((n) => {
-            const Icon = typeIcons[n.type] || Bell;
-            const content = (
-              <div
-                className={`flex gap-3 rounded-2xl border p-3 transition-colors ${
-                  n.is_read
-                    ? "border-padel-gray-200 bg-white"
-                    : "border-padel-teal/20 bg-padel-teal/5"
-                }`}
-              >
-                <div
-                  className={`mt-0.5 shrink-0 rounded-full p-1.5 ${
-                    n.is_read
-                      ? "bg-padel-gray-200/60 text-padel-gray-400"
-                      : "bg-padel-teal/10 text-padel-teal"
-                  }`}
-                >
-                  <Icon className="h-4 w-4" />
+        <div className="space-y-5">
+          {["Today", "Yesterday", "Earlier"].map((groupName) => {
+            const items = grouped.get(groupName);
+            if (!items || items.length === 0) return null;
+
+            return (
+              <div key={groupName} className="space-y-2">
+                <h3 className="text-xs font-semibold uppercase tracking-wider text-padel-gray-400">
+                  {groupName}
+                </h3>
+                <div className="space-y-1.5">
+                  {items.map((n) => {
+                    const Icon = typeIcons[n.type] || Bell;
+                    const content = (
+                      <div
+                        className={`flex gap-3 rounded-2xl border p-3 transition-all duration-200 ${
+                          n.is_read
+                            ? "border-padel-gray-200 bg-white"
+                            : "border-padel-teal/20 bg-padel-teal/5 shadow-[0_2px_8px_rgba(0,128,128,0.06)]"
+                        }`}
+                      >
+                        <div
+                          className={`mt-0.5 flex h-8 w-8 shrink-0 items-center justify-center rounded-full ${
+                            n.is_read
+                              ? "bg-padel-gray-200/60 text-padel-gray-400"
+                              : "bg-padel-teal/10 text-padel-teal"
+                          }`}
+                        >
+                          <Icon className="h-4 w-4" />
+                        </div>
+                        <div className="min-w-0 flex-1">
+                          <div className="flex items-start justify-between gap-2">
+                            <p
+                              className={`text-sm ${
+                                n.is_read ? "text-padel-gray-400" : "font-medium text-padel-charcoal"
+                              }`}
+                            >
+                              {n.title}
+                            </p>
+                            <span className="shrink-0 text-[11px] text-padel-gray-400">
+                              {timeAgo(n.created_at)}
+                            </span>
+                          </div>
+                          <p className="text-[13px] text-padel-gray-400">{n.message}</p>
+                        </div>
+                        {!n.is_read && (
+                          <button
+                            onClick={(e) => {
+                              e.preventDefault();
+                              e.stopPropagation();
+                              handleMarkRead(n.id);
+                            }}
+                            className="shrink-0 self-start rounded-full p-1.5 text-padel-gray-400 hover:bg-padel-soft-gray hover:text-padel-charcoal"
+                            title="Mark as read"
+                          >
+                            <CheckCheck className="h-3.5 w-3.5" />
+                          </button>
+                        )}
+                      </div>
+                    );
+
+                    if (n.booking_id) {
+                      return (
+                        <Link
+                          key={n.id}
+                          href={`/bookings/${n.booking_id}`}
+                          onClick={() => {
+                            if (!n.is_read) handleMarkRead(n.id);
+                          }}
+                        >
+                          {content}
+                        </Link>
+                      );
+                    }
+
+                    return <div key={n.id}>{content}</div>;
+                  })}
                 </div>
-                <div className="min-w-0 flex-1">
-                  <p
-                    className={`text-sm ${
-                      n.is_read ? "text-padel-gray-400" : "font-medium text-padel-charcoal"
-                    }`}
-                  >
-                    {n.title}
-                  </p>
-                  <p className="text-sm text-padel-gray-400">{n.message}</p>
-                  <p className="mt-1 text-xs text-padel-gray-400">
-                    {timeAgo(n.created_at)}
-                  </p>
-                </div>
-                {!n.is_read && (
-                  <button
-                    onClick={(e) => {
-                      e.preventDefault();
-                      e.stopPropagation();
-                      handleMarkRead(n.id);
-                    }}
-                    className="shrink-0 self-start rounded p-1 text-padel-gray-400 hover:bg-padel-soft-gray hover:text-padel-charcoal"
-                    title="Mark as read"
-                  >
-                    <CheckCheck className="h-4 w-4" />
-                  </button>
-                )}
               </div>
             );
-
-            if (n.booking_id) {
-              return (
-                <Link
-                  key={n.id}
-                  href={`/bookings/${n.booking_id}`}
-                  onClick={() => {
-                    if (!n.is_read) handleMarkRead(n.id);
-                  }}
-                >
-                  {content}
-                </Link>
-              );
-            }
-
-            return <div key={n.id}>{content}</div>;
           })}
         </div>
       )}

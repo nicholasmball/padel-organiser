@@ -22,6 +22,7 @@ export async function ensureProfile(
       full_name:
         (user.user_metadata?.full_name as string) || user.email?.split("@")[0] || "New Player",
       email: user.email ?? "",
+      phone: (user.user_metadata?.phone as string) || null,
     });
 
     if (error && error.code !== "23505") {

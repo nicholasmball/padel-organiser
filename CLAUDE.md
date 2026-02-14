@@ -58,6 +58,8 @@ src/
 
 ## Auth & Navigation
 
+- **Sign-in methods**: Email/password and Google OAuth. Both sign-in and sign-up pages have a "Sign in/up with Google" button.
+- **Google OAuth** uses `supabase.auth.signInWithOAuth({ provider: 'google' })` with `redirectTo` pointing to `/auth/callback`. Requires Google provider enabled in Supabase Dashboard (Authentication > Providers) and `localhost` added to Redirect URLs for local dev.
 - **Middleware** (`src/lib/supabase/middleware.ts`) redirects unauthenticated users to `/auth/sign-in` and authenticated users away from auth pages. Also checks blacklist for authenticated users — signs out + redirects with `?blocked=true` if blacklisted.
 - **Side nav, bottom nav, and header controls** are hidden when signed out or on auth pages (prevents flash during sign-in transition)
 - `useAuth()` hook tracks client-side auth state via Supabase `onAuthStateChange`

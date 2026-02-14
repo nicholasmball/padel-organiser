@@ -133,7 +133,7 @@ export function BookingCard({
             </span>
             {total_cost > 0 && (
               <span className="font-medium text-padel-charcoal">
-                £{costPerPlayer.toFixed(2)}/player
+                £{total_cost.toFixed(2)} · £{costPerPlayer.toFixed(2)}/player
               </span>
             )}
           </div>

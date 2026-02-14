@@ -6,36 +6,61 @@ import { Bell } from "lucide-react";
 import { toast } from "sonner";
 import { useAuth } from "@/hooks/use-auth";
 import { getUnreadCount } from "@/lib/actions/notifications";
+import { createClient } from "@/lib/supabase/client";
 
 export function NotificationBell() {
   const { user } = useAuth();
   const [count, setCount] = useState(0);
-  const prevCount = useRef(0);
+  const initialised = useRef(false);
 
   useEffect(() => {
     if (!user) return;
 
+    // Initial fetch
     async function fetchCount() {
       const c = await getUnreadCount();
-      // Show toast if count increased (new notification arrived)
-      if (c > prevCount.current && prevCount.current >= 0) {
-        const newCount = c - prevCount.current;
-        if (prevCount.current > 0) {
-          toast.info(
-            newCount === 1
-              ? "You have a new notification"
-              : `You have ${newCount} new notifications`,
-            { duration: 4000 }
-          );
-        }
-      }
-      prevCount.current = c;
+      initialised.current = true;
       setCount(c);
     }
-
     fetchCount();
-    const interval = setInterval(fetchCount, 30000);
-    return () => clearInterval(interval);
+
+    // Subscribe to realtime changes on notifications table for this user
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`notifications:${user.id}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "INSERT",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          setCount((prev) => prev + 1);
+          if (initialised.current) {
+            toast.info("You have a new notification", { duration: 4000 });
+          }
+        }
+      )
+      .on(
+        "postgres_changes",
+        {
+          event: "UPDATE",
+          schema: "public",
+          table: "notifications",
+          filter: `user_id=eq.${user.id}`,
+        },
+        () => {
+          // Notification marked as read — refetch count
+          getUnreadCount().then((c) => setCount(c));
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
   }, [user]);
 
   if (!user) return null;

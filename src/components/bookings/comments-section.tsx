@@ -1,8 +1,9 @@
 "use client";
 
-import { useState } from "react";
+import { useState, useEffect, useRef } from "react";
 import { useRouter } from "next/navigation";
 import { useAuth } from "@/hooks/use-auth";
+import { createClient } from "@/lib/supabase/client";
 import {
   addComment,
   updateComment,
@@ -71,6 +72,38 @@ export function CommentsSection({
   const [editContent, setEditContent] = useState("");
   const [loading, setLoading] = useState(false);
 
+  // Track whether the current user just performed an action (to avoid double-refresh)
+  const selfAction = useRef(false);
+
+  // Subscribe to realtime comment changes for this booking
+  useEffect(() => {
+    const supabase = createClient();
+    const channel = supabase
+      .channel(`comments:${bookingId}`)
+      .on(
+        "postgres_changes",
+        {
+          event: "*",
+          schema: "public",
+          table: "comments",
+          filter: `booking_id=eq.${bookingId}`,
+        },
+        () => {
+          // Skip refresh if the current user just triggered this via their own action
+          if (selfAction.current) {
+            selfAction.current = false;
+            return;
+          }
+          router.refresh();
+        }
+      )
+      .subscribe();
+
+    return () => {
+      supabase.removeChannel(channel);
+    };
+  }, [bookingId, router]);
+
   const pinnedComments = comments.filter((c) => c.is_pinned);
   const regularComments = comments.filter((c) => !c.is_pinned);
   const isOrganiser = user?.id === organiserId;
@@ -78,6 +111,7 @@ export function CommentsSection({
   async function handleAdd() {
     if (!newComment.trim()) return;
     setLoading(true);
+    selfAction.current = true;
     await addComment(bookingId, newComment);
     setNewComment("");
     setLoading(false);
@@ -87,6 +121,7 @@ export function CommentsSection({
   async function handleEdit(commentId: string) {
     if (!editContent.trim()) return;
     setLoading(true);
+    selfAction.current = true;
     await updateComment(commentId, bookingId, editContent);
     setEditingId(null);
     setEditContent("");
@@ -96,6 +131,7 @@ export function CommentsSection({
 
   async function handleDelete(commentId: string) {
     setLoading(true);
+    selfAction.current = true;
     await deleteComment(commentId, bookingId);
     setLoading(false);
     router.refresh();
@@ -103,6 +139,7 @@ export function CommentsSection({
 
   async function handleTogglePin(commentId: string, currentlyPinned: boolean) {
     setLoading(true);
+    selfAction.current = true;
     await togglePinComment(commentId, bookingId, !currentlyPinned);
     setLoading(false);
     router.refresh();

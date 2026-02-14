@@ -73,6 +73,7 @@ describe("ensureProfile", () => {
       id: "user-1",
       full_name: "John Smith",
       email: "test@test.com",
+      phone: null,
     });
   });
 
@@ -88,6 +89,7 @@ describe("ensureProfile", () => {
       id: "user-1",
       full_name: "jane.doe",
       email: "jane.doe@example.com",
+      phone: null,
     });
   });
 

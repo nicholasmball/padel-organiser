@@ -20,6 +20,7 @@ import {
 export default function SignUpPage() {
   const router = useRouter();
   const [fullName, setFullName] = useState("");
+  const [phone, setPhone] = useState("");
   const [email, setEmail] = useState("");
   const [password, setPassword] = useState("");
   const [error, setError] = useState<string | null>(null);
@@ -47,6 +48,7 @@ export default function SignUpPage() {
       options: {
         data: {
           full_name: fullName,
+          phone: phone || undefined,
         },
         emailRedirectTo: `${window.location.origin}/auth/callback`,
       },
@@ -122,6 +124,16 @@ export default function SignUpPage() {
                 value={fullName}
                 onChange={(e) => setFullName(e.target.value)}
                 required
+              />
+            </div>
+            <div className="space-y-2">
+              <Label htmlFor="phone">Phone <span className="text-muted-foreground">(optional)</span></Label>
+              <Input
+                id="phone"
+                type="tel"
+                placeholder="+44 7700 900000"
+                value={phone}
+                onChange={(e) => setPhone(e.target.value)}
               />
             </div>
             <div className="space-y-2">

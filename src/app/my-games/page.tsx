@@ -27,6 +27,12 @@ export default async function MyGamesPage() {
   const signupList = (mySignups as Array<Record<string, unknown>>) || [];
   const bookingIds = signupList.map((s) => s.booking_id as string);
 
+  // Map booking_id → user's signup status
+  const mySignupStatusMap = new Map<string, string>();
+  signupList.forEach((s) => {
+    mySignupStatusMap.set(s.booking_id as string, s.status as string);
+  });
+
   const { data: bookings } = bookingIds.length
     ? await supabase
         .from("bookings")
@@ -182,10 +188,14 @@ export default async function MyGamesPage() {
               const cost = b.total_cost as number;
               const costPerPlayer = confirmed > 0 ? cost / confirmed : cost / maxP;
               const status = b.status as string;
+              const myStatus = mySignupStatusMap.get(bid);
+              const isWaitlisted = myStatus === "waitlist";
 
               return (
                 <Link key={bid} href={`/bookings/${bid}`}>
-                  <div className={`flex items-center justify-between rounded-2xl border border-padel-gray-200 bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(0,128,128,0.08)]`}>
+                  <div className={`flex items-center justify-between rounded-2xl border bg-white p-4 shadow-[0_2px_8px_rgba(0,0,0,0.04)] transition-all duration-200 hover:-translate-y-0.5 hover:shadow-[0_8px_16px_rgba(0,128,128,0.08)] ${
+                    isWaitlisted ? "border-amber-200" : "border-padel-gray-200"
+                  }`}>
                     <div className="min-w-0 flex-1">
                       <div className="flex items-center gap-2">
                         <p className="truncate text-[15px] font-semibold text-padel-charcoal">{b.venue_name as string}</p>
@@ -213,13 +223,15 @@ export default async function MyGamesPage() {
                         </div>
                       )}
                       <span className={`rounded-md px-2 py-0.5 text-[11px] font-semibold uppercase tracking-wider ${
-                        status === "open"
-                          ? "bg-padel-lime text-padel-charcoal"
-                          : status === "full"
-                            ? "bg-padel-teal text-white"
-                            : "bg-padel-teal text-white"
+                        isWaitlisted
+                          ? "bg-[rgba(255,152,0,0.15)] text-[#E65100]"
+                          : status === "open"
+                            ? "bg-padel-lime text-padel-charcoal"
+                            : status === "full"
+                              ? "bg-padel-teal text-white"
+                              : "bg-padel-teal text-white"
                       }`}>
-                        {status === "open" ? "Open" : status === "full" ? "Full" : "Confirmed"}
+                        {isWaitlisted ? "Waitlisted" : status === "open" ? "Open" : status === "full" ? "Full" : "Confirmed"}
                       </span>
                     </div>
                   </div>
